@@ -1,17 +1,18 @@
 import type { Metadata } from 'next';
-import { Prompt } from 'next/font/google';
+import { Kanit } from 'next/font/google';
 import './globals.css';
 
-const promptFont = Prompt({
+// ใช้ฟอนต์ Kanit (คณิต) - โมเดิร์น ไม่มีหัว ชัดเจน สไตล์ EdTech ยอดนิยม
+const kanit = Kanit({
   weight: ['300', '400', '500', '600', '700'],
-  subsets: ['latin', 'thai'],
+  subsets: ['thai', 'latin'],
   display: 'swap',
-  variable: '--font-prompt',
+  variable: '--font-kanit',
 });
 
 export const metadata: Metadata = {
-  title: 'Krusos Smart Assessment | ระบบจัดสอบออนไลน์และวิเคราะห์ผลเชิงลึก โรงเรียนวัดบางปูน',
-  description: 'แพลตฟอร์มสอบออนไลน์มาตรฐาน พร้อมระบบป้องกันการทุจริตแบบเรียลไทม์ และการวิเคราะห์คุณภาพข้อสอบรายข้อ (Item Analysis CTT)',
+  title: 'Krusos Smart Assessment | ระบบจัดสอบออนไลน์ โรงเรียนวัดบางปูน',
+  description: 'แพลตฟอร์มสอบออนไลน์มาตรฐาน พร้อมระบบตรวจจับการทุจริตและการวิเคราะห์ข้อสอบรายข้อ',
 };
 
 export default function RootLayout({
@@ -20,8 +21,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="th" className={promptFont.variable}>
-      <body className="font-sans antialiased bg-slate-950 text-slate-100 selection:bg-emerald-500 selection:text-white">
+    <html lang="th" className={kanit.variable}>
+      <body className={`${kanit.className} antialiased bg-slate-950 text-slate-100 selection:bg-emerald-500 selection:text-white`}>
         {children}
       </body>
     </html>
