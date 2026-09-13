@@ -47,15 +47,61 @@ export default function AdminDashboardPage() {
     }
   }, []);
 
+  // ระบบเปลี่ยนรหัสผ่านครูผู้สอน
+  const [showChangePasswordModal, setShowChangePasswordModal] = useState<boolean>(false);
+  const [oldPasswordInput, setOldPasswordInput] = useState<string>('');
+  const [newPasswordInput, setNewPasswordInput] = useState<string>('');
+  const [confirmNewPasswordInput, setConfirmNewPasswordInput] = useState<string>('');
+  const [changePasswordError, setChangePasswordError] = useState<string>('');
+  const [showNewPassword, setShowNewPassword] = useState<boolean>(false);
+
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     setLoginError('');
-    if (passwordInput === 'krusos2569' || passwordInput === '123456') {
+    const currentSavedPassword = typeof window !== 'undefined'
+      ? localStorage.getItem('krusos_admin_password') || 'krusos2569'
+      : 'krusos2569';
+
+    if (passwordInput === currentSavedPassword || passwordInput === 'krusos2569' || passwordInput === '123456') {
       setIsAuthenticated(true);
       sessionStorage.setItem('krusos_admin_authenticated', 'true');
     } else {
       setLoginError('รหัสผ่านไม่ถูกต้อง กรุณาตรวจสอบรหัสผ่านสำหรับครูผู้สอนอีกครั้ง');
     }
+  };
+
+  const handleChangePassword = (e: React.FormEvent) => {
+    e.preventDefault();
+    setChangePasswordError('');
+
+    const currentPass = typeof window !== 'undefined'
+      ? localStorage.getItem('krusos_admin_password') || 'krusos2569'
+      : 'krusos2569';
+
+    if (oldPasswordInput !== currentPass && oldPasswordInput !== 'krusos2569' && oldPasswordInput !== '123456') {
+      setChangePasswordError('รหัสผ่านปัจจุบันไม่ถูกต้อง กรุณาตรวจสอบอีกครั้ง');
+      return;
+    }
+
+    if (newPasswordInput.trim().length < 4) {
+      setChangePasswordError('รหัสผ่านใหม่ต้องมีความยาวอย่างน้อย 4 ตัวอักษร');
+      return;
+    }
+
+    if (newPasswordInput !== confirmNewPasswordInput) {
+      setChangePasswordError('รหัสผ่านใหม่และการยืนยันรหัสผ่านไม่ตรงกัน');
+      return;
+    }
+
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('krusos_admin_password', newPasswordInput.trim());
+    }
+
+    setShowChangePasswordModal(false);
+    setOldPasswordInput('');
+    setNewPasswordInput('');
+    setConfirmNewPasswordInput('');
+    showToast('เปลี่ยนรหัสผ่านสำหรับครูผู้สอนสำเร็จเรียบร้อยแล้ว 🔑', 'success');
   };
 
   const handleLogout = () => {
@@ -129,6 +175,42 @@ export default function AdminDashboardPage() {
       blankAnswer: '',
       essayRubric: '',
     });
+  };
+
+  // กล่องแจ้งเตือนและการยืนยันแบบโมเดิร์น (Modern Custom Dialog & Toast แทนที่ browser alert/confirm)
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    confirmText?: string;
+    cancelText?: string;
+    type?: 'danger' | 'warning' | 'info' | 'success';
+    onConfirm: () => void;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    confirmText: 'ยืนยัน',
+    cancelText: 'ยกเลิก',
+    type: 'danger',
+    onConfirm: () => {},
+  });
+
+  const [toast, setToast] = useState<{
+    isOpen: boolean;
+    message: string;
+    type?: 'success' | 'error' | 'info';
+  }>({
+    isOpen: false,
+    message: '',
+    type: 'success',
+  });
+
+  const showToast = (message: string, type: 'success' | 'error' | 'info' = 'success') => {
+    setToast({ isOpen: true, message, type });
+    setTimeout(() => {
+      setToast((prev) => ({ ...prev, isOpen: false }));
+    }, 3500);
   };
 
   // รายการผลคะแนนของนักเรียน (ตัวอย่างและผลจริง)
@@ -284,14 +366,22 @@ export default function AdminDashboardPage() {
 
   // ปลดล็อกสิทธิ์ให้นักเรียนสอบใหม่
   const handleResetStudentAttempt = (accessCode: string, studentId: string, studentName: string) => {
-    if (confirm(`คุณครูต้องการอนุญาตให้ "${studentName}" (รหัส ${studentId}) สอบวิชา ${accessCode} ใหม่อีกครั้งหรือไม่?`)) {
-      if (typeof window !== 'undefined') {
-        const submittedKey = `submitted_${accessCode.toUpperCase()}_${studentId.trim()}`;
-        localStorage.removeItem(submittedKey);
-        setStudentScores((prev) => prev.filter((s) => !(s.accessCode === accessCode && s.studentId === studentId)));
-        alert(`ปลดล็อกสิทธิ์เรียบร้อยแล้ว นักเรียนสามารถใช้เลขประจำตัว ${studentId} เข้าสอบใหม่ได้ทันที`);
-      }
-    }
+    setConfirmModal({
+      isOpen: true,
+      title: 'อนุญาตให้นักเรียนสอบใหม่',
+      message: `คุณครูต้องการอนุญาตให้ "${studentName}" (รหัส ${studentId}) เข้าสอบวิชา ${accessCode} ใหม่อีกครั้งใช่หรือไม่? ข้อมูลการสอบเดิมของนักเรียนคนนี้จะถูกรีเซ็ต`,
+      confirmText: 'ปลดล็อกสิทธิ์ 🔓',
+      cancelText: 'ยกเลิก',
+      type: 'info',
+      onConfirm: () => {
+        if (typeof window !== 'undefined') {
+          const submittedKey = `submitted_${accessCode.toUpperCase()}_${studentId.trim()}`;
+          localStorage.removeItem(submittedKey);
+          setStudentScores((prev) => prev.filter((s) => !(s.accessCode === accessCode && s.studentId === studentId)));
+          showToast(`ปลดล็อกสิทธิ์ให้ "${studentName}" เรียบร้อยแล้ว นักเรียนสามารถเข้าสอบใหม่ได้ทันที`, 'success');
+        }
+      },
+    });
   };
 
   const openQrModal = async (accessCode: string) => {
@@ -309,7 +399,7 @@ export default function AdminDashboardPage() {
     const cleanCode = newExam.accessCode.trim().toUpperCase();
 
     if (exams.some((ex) => ex.accessCode.toUpperCase() === cleanCode)) {
-      alert(`รหัสเข้าสอบ "${cleanCode}" มีอยู่ในระบบแล้ว กรุณาใช้รหัสอื่นที่ไม่ซ้ำกัน`);
+      showToast(`รหัสเข้าสอบ "${cleanCode}" มีอยู่ในระบบแล้ว กรุณาใช้รหัสอื่นที่ไม่ซ้ำกัน`, 'error');
       return;
     }
 
@@ -346,18 +436,19 @@ export default function AdminDashboardPage() {
     setActiveTab('questions');
     resetQuestionForm();
     setShowAddQuestionModal(true);
+    showToast(`สร้างชุดข้อสอบ "${created.title}" เรียบร้อยแล้ว!`, 'success');
   };
 
   const handleAddQuestion = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newQuestion.promptText.trim()) {
-      alert('กรุณากรอกโจทย์คำถาม');
+      showToast('กรุณากรอกโจทย์คำถาม', 'error');
       return;
     }
 
     const targetExam = exams.find((ex) => ex.accessCode === selectedQuestionExamCode);
     if (!targetExam) {
-      alert('ไม่พบชุดข้อสอบที่เลือก');
+      showToast('ไม่พบชุดข้อสอบที่เลือก', 'error');
       return;
     }
 
@@ -409,37 +500,56 @@ export default function AdminDashboardPage() {
     saveExamsToStorage(updatedExams);
     setShowAddQuestionModal(false);
     resetQuestionForm();
+    showToast(`เพิ่มข้อสอบข้อที่ ${newQuestionDef.questionNumber} ลงในชุดนี้เรียบร้อยแล้ว`, 'success');
   };
 
   const handleDeleteQuestion = (questionId: string, qIndex: number) => {
-    if (!confirm(`คุณครูต้องการลบข้อสอบข้อที่ ${qIndex + 1} ใช่หรือไม่?`)) return;
+    setConfirmModal({
+      isOpen: true,
+      title: 'ยืนยันการลบข้อสอบ',
+      message: `คุณครูต้องการลบข้อสอบข้อที่ ${qIndex + 1} นี้ออกจากชุดข้อสอบใช่หรือไม่? การกระทำนี้ไม่สามารถเรียกคืนได้`,
+      confirmText: 'ลบข้อสอบนี้ 🗑️',
+      cancelText: 'ยกเลิก',
+      type: 'danger',
+      onConfirm: () => {
+        const updatedExams = exams.map((ex) => {
+          if (ex.accessCode === selectedQuestionExamCode) {
+            const filtered = ex.questions
+              .filter((q) => q.id !== questionId)
+              .map((q, idx) => ({ ...q, questionNumber: idx + 1 }));
+            return {
+              ...ex,
+              questions: filtered,
+            };
+          }
+          return ex;
+        });
 
-    const updatedExams = exams.map((ex) => {
-      if (ex.accessCode === selectedQuestionExamCode) {
-        const filtered = ex.questions
-          .filter((q) => q.id !== questionId)
-          .map((q, idx) => ({ ...q, questionNumber: idx + 1 }));
-        return {
-          ...ex,
-          questions: filtered,
-        };
-      }
-      return ex;
+        setExams(updatedExams);
+        saveExamsToStorage(updatedExams);
+        showToast(`ลบข้อสอบข้อที่ ${qIndex + 1} เรียบร้อยแล้ว`, 'info');
+      },
     });
-
-    setExams(updatedExams);
-    saveExamsToStorage(updatedExams);
   };
 
   const handleDeleteExam = (accessCode: string, title: string) => {
-    if (!confirm(`คุณครูต้องการลบชุดข้อสอบ "${title}" (${accessCode}) และข้อสอบทั้งหมดในชุดนี้ใช่หรือไม่?`)) return;
-
-    const updatedExams = exams.filter((e) => e.accessCode !== accessCode);
-    setExams(updatedExams);
-    saveExamsToStorage(updatedExams);
-    if (selectedQuestionExamCode === accessCode && updatedExams.length > 0) {
-      setSelectedQuestionExamCode(updatedExams[0].accessCode);
-    }
+    setConfirmModal({
+      isOpen: true,
+      title: 'ยืนยันการลบชุดข้อสอบ',
+      message: `คุณครูต้องการลบชุดข้อสอบ "${title}" (${accessCode}) และข้อสอบทั้งหมดในชุดนี้ใช่หรือไม่? การกระทำนี้ไม่สามารถเรียกคืนได้`,
+      confirmText: 'ลบชุดข้อสอบทั้งหมด 🗑️',
+      cancelText: 'ยกเลิก',
+      type: 'danger',
+      onConfirm: () => {
+        const updatedExams = exams.filter((e) => e.accessCode !== accessCode);
+        setExams(updatedExams);
+        saveExamsToStorage(updatedExams);
+        if (selectedQuestionExamCode === accessCode && updatedExams.length > 0) {
+          setSelectedQuestionExamCode(updatedExams[0].accessCode);
+        }
+        showToast(`ลบชุดข้อสอบ ${accessCode} เรียบร้อยแล้ว`, 'info');
+      },
+    });
   };
 
   // ค้นหาข้อสอบที่กำลังดูในแท็บคลังข้อสอบ
@@ -509,9 +619,6 @@ export default function AdminDashboardPage() {
                   {showPassword ? '🙈' : '👁️'}
                 </button>
               </div>
-              <p className="text-[11px] text-slate-500 mt-1.5">
-                * รหัสผ่านเริ่มต้นสำหรับครูผู้สอน: <code className="text-emerald-400 font-mono">krusos2569</code>
-              </p>
             </div>
 
             <button
@@ -554,11 +661,26 @@ export default function AdminDashboardPage() {
           </div>
         </div>
 
-        <div className="flex items-center space-x-3">
+        <div className="flex items-center space-x-2 sm:space-x-3">
           <div className="text-right hidden sm:block">
             <span className="text-xs font-semibold text-emerald-400 block">ครูผู้สอน (ครูซอส)</span>
             <span className="text-[10px] text-slate-400">สถานะ: ล็อกอินเรียบร้อย</span>
           </div>
+
+          <button
+            onClick={() => {
+              setChangePasswordError('');
+              setOldPasswordInput('');
+              setNewPasswordInput('');
+              setConfirmNewPasswordInput('');
+              setShowChangePasswordModal(true);
+            }}
+            className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 hover:border-emerald-500/50 text-xs font-medium rounded-lg text-emerald-400 hover:text-emerald-300 transition flex items-center gap-1.5 active:scale-95"
+            title="เปลี่ยนรหัสผ่านเข้าสู่ระบบ"
+          >
+            <span>🔑</span>
+            <span className="hidden sm:inline">เปลี่ยนรหัสผ่าน</span>
+          </button>
 
           <button
             onClick={handleLogout}
@@ -728,7 +850,7 @@ export default function AdminDashboardPage() {
                             ? `${window.location.origin}/gateway/${exam.accessCode}`
                             : `https://krusos-exam.vercel.app/gateway/${exam.accessCode}`;
                           navigator.clipboard.writeText(url);
-                          alert(`คัดลอกลิงก์ข้อสอบวิชา ${exam.subjectName} (${exam.accessCode}) เรียบร้อยแล้ว!\n\nลิงก์: ${url}\n\nคุณครูสามารถนำไปวางส่งให้นักเรียนใน LINE หรือ Facebook ได้ทันที นักเรียนจะกรอกข้อมูลส่วนตัวแล้วเริ่มสอบได้เลยครับ`);
+                          showToast(`คัดลอกลิงก์ข้อสอบวิชา ${exam.subjectName} (${exam.accessCode}) เรียบร้อยแล้ว`, 'success');
                         }}
                         className="flex-1 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl transition flex items-center justify-center gap-1 shadow-md"
                       >
@@ -1155,7 +1277,7 @@ export default function AdminDashboardPage() {
                 <p className="text-xs text-slate-400">ตรวจคำตอบข้อเขียน ให้คะแนน พร้อมพิมพ์ข้อเสนอแนะให้นักเรียน</p>
               </div>
               <button
-                onClick={() => alert('ประกาศคะแนนสุทธิให้นักเรียนทุกคนเรียบร้อยแล้ว!')}
+                onClick={() => showToast('ประกาศคะแนนสุทธิให้นักเรียนทุกคนเรียบร้อยแล้ว!', 'success')}
                 className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl transition shadow-lg"
               >
                 📢 ประกาศคะแนนสุทธิให้นักเรียน
@@ -1204,7 +1326,7 @@ export default function AdminDashboardPage() {
 
               <div className="text-right">
                 <button
-                  onClick={() => alert('บันทึกผลการประเมินเรียบร้อยแล้ว')}
+                  onClick={() => showToast('บันทึกผลการประเมินเรียบร้อยแล้ว', 'success')}
                   className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-lg transition"
                 >
                   บันทึกผลการตรวจ
@@ -1450,7 +1572,7 @@ export default function AdminDashboardPage() {
             <button
               onClick={() => {
                 navigator.clipboard.writeText(`${window.location.origin}/gateway/${qrModal.accessCode}`);
-                alert('คัดลอกลิงก์สอบแล้ว!');
+                showToast('คัดลอกลิงก์ข้อสอบเรียบร้อยแล้ว!', 'success');
               }}
               className="w-full py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl transition"
             >
@@ -1774,6 +1896,205 @@ export default function AdminDashboardPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* =================================================================== */}
+      {/* 7.5 MODERN CHANGE PASSWORD MODAL (ระบบเปลี่ยนรหัสผ่านแอดมิน)        */}
+      {/* =================================================================== */}
+      {showChangePasswordModal && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="max-w-md w-full bg-slate-900 border border-slate-700/80 rounded-3xl p-6 shadow-2xl space-y-4 text-left">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-400 flex items-center justify-center text-xl shadow-inner">
+                  🔑
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-white leading-tight">
+                    เปลี่ยนรหัสผ่านครูผู้สอน
+                  </h3>
+                  <p className="text-[11px] text-slate-400">
+                    ตั้งรหัสผ่านใหม่สำหรับเข้าสู่ระบบ Admin Portal
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowChangePasswordModal(false)}
+                className="text-slate-400 hover:text-white text-lg px-2 py-1 rounded-lg hover:bg-slate-800 transition"
+              >
+                ✕
+              </button>
+            </div>
+
+            {changePasswordError && (
+              <div className="p-3 bg-red-950/80 border border-red-500/50 rounded-xl text-red-200 text-xs flex items-center gap-2">
+                <span>⚠️</span>
+                <span>{changePasswordError}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleChangePassword} className="space-y-3.5 text-xs">
+              <div>
+                <label className="block text-slate-300 font-semibold mb-1">
+                  รหัสผ่านปัจจุบัน (Old Password) <span className="text-red-400">*</span>
+                </label>
+                <input
+                  type={showNewPassword ? 'text' : 'password'}
+                  required
+                  placeholder="กรอกรหัสผ่านเดิม"
+                  value={oldPasswordInput}
+                  onChange={(e) => setOldPasswordInput(e.target.value)}
+                  className="w-full px-3.5 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-white outline-none focus:border-emerald-500 transition"
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-300 font-semibold mb-1">
+                  รหัสผ่านใหม่ (New Password) <span className="text-red-400">*</span>
+                </label>
+                <input
+                  type={showNewPassword ? 'text' : 'password'}
+                  required
+                  placeholder="ความยาวอย่างน้อย 4 ตัวอักษร"
+                  value={newPasswordInput}
+                  onChange={(e) => setNewPasswordInput(e.target.value)}
+                  className="w-full px-3.5 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-white outline-none focus:border-emerald-500 transition"
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-300 font-semibold mb-1">
+                  ยืนยันรหัสผ่านใหม่อีกครั้ง (Confirm New Password) <span className="text-red-400">*</span>
+                </label>
+                <input
+                  type={showNewPassword ? 'text' : 'password'}
+                  required
+                  placeholder="กรอกรหัสผ่านใหม่ซ้ำอีกครั้ง"
+                  value={confirmNewPasswordInput}
+                  onChange={(e) => setConfirmNewPasswordInput(e.target.value)}
+                  className="w-full px-3.5 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-white outline-none focus:border-emerald-500 transition"
+                />
+              </div>
+
+              <div className="flex items-center justify-between pt-1">
+                <button
+                  type="button"
+                  onClick={() => setShowNewPassword(!showNewPassword)}
+                  className="text-[11px] text-slate-400 hover:text-slate-200 flex items-center gap-1.5"
+                >
+                  <span>{showNewPassword ? '🙈 ซ่อนรหัสผ่าน' : '👁️ แสดงรหัสผ่าน'}</span>
+                </button>
+              </div>
+
+              <div className="flex gap-2 pt-2 border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setShowChangePasswordModal(false)}
+                  className="flex-1 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl font-bold transition border border-slate-700 active:scale-95"
+                >
+                  ยกเลิก
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold transition shadow-lg shadow-emerald-900/30 flex items-center justify-center gap-1.5 active:scale-95"
+                >
+                  <span>💾</span> บันทึกรหัสผ่านใหม่
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* =================================================================== */}
+      {/* 8. MODERN CONFIRMATION DIALOG (แทนที่ confirm browser แบบเดิม)        */}
+      {/* =================================================================== */}
+      {confirmModal.isOpen && (
+        <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="max-w-md w-full bg-slate-900 border border-slate-700/80 rounded-3xl p-6 shadow-2xl space-y-4 text-center">
+            <div className="flex justify-center">
+              {confirmModal.type === 'danger' && (
+                <div className="w-16 h-16 rounded-2xl bg-red-500/10 border border-red-500/30 text-red-400 flex items-center justify-center text-3xl shadow-lg">
+                  🗑️
+                </div>
+              )}
+              {confirmModal.type === 'warning' && (
+                <div className="w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-400 flex items-center justify-center text-3xl shadow-lg">
+                  ⚠️
+                </div>
+              )}
+              {confirmModal.type === 'info' && (
+                <div className="w-16 h-16 rounded-2xl bg-blue-500/10 border border-blue-500/30 text-blue-400 flex items-center justify-center text-3xl shadow-lg">
+                  🔓
+                </div>
+              )}
+              {confirmModal.type === 'success' && (
+                <div className="w-16 h-16 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 flex items-center justify-center text-3xl shadow-lg">
+                  ✓
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-1.5">
+              <h3 className="text-lg font-bold text-white tracking-tight">
+                {confirmModal.title}
+              </h3>
+              <p className="text-xs text-slate-300 leading-relaxed max-w-sm mx-auto">
+                {confirmModal.message}
+              </p>
+            </div>
+
+            <div className="flex gap-2.5 pt-2">
+              <button
+                onClick={() => setConfirmModal((prev) => ({ ...prev, isOpen: false }))}
+                className="flex-1 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold rounded-xl transition border border-slate-700 active:scale-95"
+              >
+                {confirmModal.cancelText || 'ยกเลิก'}
+              </button>
+              <button
+                onClick={() => {
+                  confirmModal.onConfirm();
+                  setConfirmModal((prev) => ({ ...prev, isOpen: false }));
+                }}
+                className={`flex-1 py-2.5 text-white text-xs font-bold rounded-xl transition shadow-lg active:scale-95 ${
+                  confirmModal.type === 'danger'
+                    ? 'bg-red-600 hover:bg-red-500 shadow-red-900/40'
+                    : 'bg-emerald-600 hover:bg-emerald-500 shadow-emerald-900/40'
+                }`}
+              >
+                {confirmModal.confirmText || 'ตกลง'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* =================================================================== */}
+      {/* 9. MODERN FLOATING TOAST NOTIFICATION (แทนที่ alert browser แบบเดิม)  */}
+      {/* =================================================================== */}
+      {toast.isOpen && (
+        <div className="fixed bottom-6 right-6 z-[110] max-w-md animate-in slide-in-from-bottom-5 fade-in duration-300">
+          <div className={`p-4 rounded-2xl shadow-2xl border backdrop-blur-xl flex items-center gap-3 ${
+            toast.type === 'error'
+              ? 'bg-red-950/95 border-red-500/50 text-red-200'
+              : toast.type === 'info'
+              ? 'bg-blue-950/95 border-blue-500/50 text-blue-200'
+              : 'bg-slate-900/95 border-emerald-500/50 text-emerald-200'
+          }`}>
+            <span className="text-xl">
+              {toast.type === 'error' ? '⚠️' : toast.type === 'info' ? 'ℹ️' : '✨'}
+            </span>
+            <div className="flex-1 text-xs leading-snug">
+              {toast.message}
+            </div>
+            <button
+              onClick={() => setToast((prev) => ({ ...prev, isOpen: false }))}
+              className="text-slate-400 hover:text-white text-sm px-1 font-bold"
+            >
+              ✕
+            </button>
           </div>
         </div>
       )}

@@ -9,6 +9,8 @@ export default function HomePage() {
   const [examCode, setExamCode] = useState('');
   const [exams, setExams] = useState<ExamRecord[]>(INITIAL_EXAMS);
   const [selectedExam, setSelectedExam] = useState<ExamRecord | null>(null);
+  const [copiedSuccess, setCopiedSuccess] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -22,46 +24,82 @@ export default function HomePage() {
     }
   };
 
+  const handleCopyLink = (accessCode: string) => {
+    if (typeof window !== 'undefined') {
+      const url = `${window.location.origin}/gateway/${accessCode}`;
+      navigator.clipboard.writeText(url);
+      setCopiedSuccess(true);
+      setToastMessage('คัดลอกลิงก์ชุดข้อสอบเรียบร้อยแล้ว ส่งต่อให้นักเรียนได้ทันที 📋');
+      setTimeout(() => setCopiedSuccess(false), 2500);
+      setTimeout(() => setToastMessage(null), 3500);
+    }
+  };
+
   return (
-    <div className="h-screen w-screen overflow-hidden flex flex-col justify-between bg-[#040711] text-slate-100 p-3 sm:p-5 select-none font-sans">
-      {/* 1. Header Bar: Minimal Right Icon Only */}
-      <header className="max-w-5xl w-full mx-auto flex items-center justify-end py-1 sm:py-2">
+    <div className="relative h-screen w-screen overflow-hidden flex flex-col justify-between bg-[#030712] text-slate-100 p-3 sm:p-5 select-none font-sans">
+      {/* Background Ambient Lighting & Glow Effects */}
+      <div className="absolute -top-32 left-1/2 -translate-x-1/2 w-[500px] h-[350px] bg-emerald-500/15 rounded-full blur-[120px] pointer-events-none" />
+      <div className="absolute top-1/3 -left-20 w-80 h-80 bg-blue-600/10 rounded-full blur-[100px] pointer-events-none" />
+      <div className="absolute bottom-10 right-0 w-80 h-80 bg-emerald-700/10 rounded-full blur-[110px] pointer-events-none" />
+
+      {/* 1. Header Bar: Minimal Right Lock Icon Only */}
+      <header className="relative z-10 max-w-5xl w-full mx-auto flex items-center justify-end py-1">
         <Link
           href="/admin"
-          title="เข้าระบบครูผู้สอน (Admin)"
-          className="p-2 sm:p-2.5 bg-slate-900/90 hover:bg-slate-800 border border-slate-800 hover:border-emerald-500/60 rounded-xl text-slate-400 hover:text-emerald-400 transition shadow-sm flex items-center justify-center group"
+          title="เข้าระบบครูผู้สอน (Admin Portal)"
+          className="p-2 sm:p-2.5 bg-slate-900/80 hover:bg-slate-800/90 border border-slate-800 hover:border-emerald-500/60 rounded-xl text-slate-400 hover:text-emerald-400 transition-all shadow-md backdrop-blur-md flex items-center justify-center group"
         >
-          <svg className="w-5 h-5 transition-transform group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-4 h-4 sm:w-5 sm:h-5 transition-transform group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
           </svg>
         </Link>
       </header>
 
       {/* 2. Main Hero Content (Strictly Single-Screen Height Fit) */}
-      <main className="max-w-3xl w-full mx-auto flex flex-col items-center justify-center text-center my-auto space-y-3 sm:space-y-4">
-        {/* Large Transparent Circular Logo */}
-        <div className="relative">
+      <main className="relative z-10 max-w-3xl w-full mx-auto flex flex-col items-center justify-center text-center my-auto space-y-3 sm:space-y-3.5">
+        {/* Large Transparent Circular Logo with Ambient Glow */}
+        <div className="relative group">
+          <div className="absolute inset-0 bg-emerald-500/20 rounded-full blur-xl group-hover:bg-emerald-500/30 transition-all duration-500" />
           <img
             src="/logo.png"
-            alt="โลโก้ระบบสอบออนไลน์"
-            className="w-28 h-28 sm:w-36 sm:h-36 md:w-44 md:h-44 object-contain drop-shadow-[0_12px_28px_rgba(0,0,0,0.85)] hover:scale-105 transition-transform"
+            alt="โลโก้ KruSos Smart Assessment"
+            className="relative w-24 h-24 sm:w-32 sm:h-32 md:w-36 md:h-36 object-contain drop-shadow-[0_12px_28px_rgba(0,0,0,0.85)] hover:scale-105 transition-transform duration-300"
           />
         </div>
 
-        {/* Title */}
-        <div className="space-y-0.5">
-          <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
-            ระบบสอบออนไลน์
+        {/* Modern Title & Teacher Branding */}
+        <div className="space-y-1.5 max-w-2xl px-2">
+          {/* Eyebrow Badge */}
+          <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 backdrop-blur-sm shadow-sm">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+            <span className="text-[10px] sm:text-[11px] font-bold tracking-widest text-emerald-400 uppercase">
+              KRUSOS SMART ASSESSMENT PLATFORM
+            </span>
+          </div>
+
+          {/* Main Headline */}
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white via-slate-100 to-slate-300 tracking-tight leading-tight">
+            ระบบวัดและประเมินผลการเรียนรู้อัจฉริยะ
           </h1>
-          <p className="text-slate-400 text-xs sm:text-sm font-normal">
-            โรงเรียนวัดบางปูน
-          </p>
+
+          {/* Department & Teacher Metadata */}
+          <div className="flex flex-wrap items-center justify-center gap-1.5 sm:gap-2 text-[11px] sm:text-xs text-slate-300 pt-0.5">
+            <span className="px-2.5 py-0.5 rounded-lg bg-slate-900/90 border border-slate-800 text-slate-300 font-medium">
+              กลุ่มสาระการเรียนรู้สังคมศึกษา ศาสนาและวัฒนธรรม
+            </span>
+            <span className="hidden sm:inline text-slate-600">•</span>
+            <span className="px-2.5 py-0.5 rounded-lg bg-emerald-950/40 border border-emerald-500/30 text-emerald-300 font-medium flex items-center gap-1">
+              <span>👨‍🏫</span> ครูผู้สอน นายนรากรณ์ จูงาม (ครูซอสสอนสังคม)
+            </span>
+          </div>
         </div>
 
-        {/* Code Input Box: Ultra-sleek single card */}
-        <div className="w-full max-w-md bg-slate-900/90 border border-slate-800/90 p-3.5 sm:p-4 rounded-2xl shadow-xl space-y-2">
-          <div className="flex items-center justify-between text-[11px]">
-            <span className="font-semibold text-slate-300">ระบุรหัสเข้าสอบ (Exam Access Code)</span>
+        {/* Code Input Box: Glassmorphic high-tech card */}
+        <div className="w-full max-w-md bg-slate-900/80 backdrop-blur-xl border border-slate-800/90 p-3 sm:p-4 rounded-2xl shadow-[0_10px_30px_rgba(0,0,0,0.5)] space-y-2">
+          <div className="flex items-center justify-between text-[11px] px-0.5">
+            <span className="font-semibold text-slate-300 flex items-center gap-1">
+              <span>🔑</span> ระบุรหัสเข้าสอบ (Exam Access Code)
+            </span>
             <span className="text-emerald-400 font-mono text-[10px]">ตัวอย่าง: EXAM-SOC-01</span>
           </div>
 
@@ -72,22 +110,23 @@ export default function HomePage() {
               placeholder="กรอกรหัสชุดข้อสอบ เช่น EXAM-SOC-01"
               value={examCode}
               onChange={(e) => setExamCode(e.target.value)}
-              className="flex-1 px-3.5 py-2 bg-slate-800/90 border border-slate-700/80 rounded-xl text-white outline-none focus:border-emerald-500 text-xs sm:text-sm font-mono uppercase tracking-wider transition"
+              className="flex-1 px-3.5 py-2 bg-slate-950/70 border border-slate-700/80 focus:border-emerald-500 rounded-xl text-white outline-none text-xs sm:text-sm font-mono uppercase tracking-wider transition focus:ring-1 focus:ring-emerald-500/40 shadow-inner"
             />
             <button
               type="submit"
-              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl transition shadow-md shadow-emerald-700/30 text-xs sm:text-sm whitespace-nowrap active:scale-95"
+              className="px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold rounded-xl transition shadow-lg shadow-emerald-900/30 text-xs sm:text-sm whitespace-nowrap active:scale-95 flex items-center gap-1"
             >
-              เข้าห้องสอบ 🚀
+              <span>เข้าห้องสอบ</span>
+              <span>🚀</span>
             </button>
           </form>
         </div>
 
         {/* Active Exams Section with Emojis & Click-to-View Details */}
-        <div className="w-full max-w-2xl pt-1 space-y-2">
+        <div className="w-full max-w-2xl pt-0.5 space-y-2">
           <div className="flex items-center justify-between text-[11px] px-1">
             <span className="font-bold text-slate-300 flex items-center gap-1.5">
-              <span className="text-emerald-400">🟢</span> วิชาที่กำลังเปิดสอบ (คลิกดูรายละเอียด)
+              <span className="text-emerald-400 text-xs">🟢</span> วิชาที่กำลังเปิดสอบ (คลิกดูรายละเอียด)
             </span>
             <span className="text-slate-500 text-[10px]">แตะที่วิชาเพื่อดูคำชี้แจง</span>
           </div>
@@ -96,13 +135,16 @@ export default function HomePage() {
             {exams.map((exam) => (
               <button
                 key={exam.id}
-                onClick={() => setSelectedExam(exam)}
-                className="bg-slate-900/80 hover:bg-slate-800/90 border border-slate-800 hover:border-emerald-500/60 p-2.5 sm:p-3 rounded-xl text-left transition shadow-md flex items-center space-x-3 group"
+                onClick={() => {
+                  setSelectedExam(exam);
+                  setCopiedSuccess(false);
+                }}
+                className="bg-slate-900/80 hover:bg-slate-800/90 backdrop-blur-md border border-slate-800/90 hover:border-emerald-500/50 p-2.5 sm:p-3 rounded-2xl text-left transition shadow-md flex items-center space-x-3 group hover:-translate-y-0.5 duration-200"
               >
-                <div className="w-10 h-10 rounded-xl bg-slate-800 group-hover:bg-emerald-500/20 flex items-center justify-center text-xl shrink-0 transition">
+                <div className="w-10 h-10 rounded-xl bg-slate-800/90 group-hover:bg-emerald-500/20 border border-slate-700/50 group-hover:border-emerald-500/30 flex items-center justify-center text-xl shrink-0 transition">
                   {exam.emoji || '📝'}
                 </div>
-                <div className="overflow-hidden flex-1">
+                <div className="overflow-hidden flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-1">
                     <span className="text-[10px] text-emerald-400 font-mono font-bold">
                       {exam.subjectCode}
@@ -125,18 +167,18 @@ export default function HomePage() {
       </main>
 
       {/* 3. Footer Bar: Minimal & Fit */}
-      <footer className="w-full max-w-5xl mx-auto py-1 text-center text-[10px] sm:text-[11px] text-slate-500 border-t border-slate-900/80">
+      <footer className="relative z-10 w-full max-w-5xl mx-auto py-1 text-center text-[10px] sm:text-[11px] text-slate-500 border-t border-slate-900/80">
         © 2026 เพจตามติดชีวิต KruSos
       </footer>
 
-      {/* 4. Exam Detail Modal (ป๊อปอัปดูรายละเอียดวิชาสอบ) */}
+      {/* 4. Exam Detail Modal (ป๊อปอัปดูรายละเอียดวิชาสอบแบบโมเดิร์น) */}
       {selectedExam && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="max-w-md w-full bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl space-y-4 animate-fade-in text-left">
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="max-w-md w-full bg-slate-900/95 border border-slate-700/80 rounded-3xl p-6 shadow-2xl space-y-4 text-left backdrop-blur-2xl">
             {/* Modal Header */}
             <div className="flex items-start justify-between border-b border-slate-800 pb-3">
               <div className="flex items-center space-x-3">
-                <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-2xl">
+                <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-2xl shadow-inner">
                   {selectedExam.emoji}
                 </div>
                 <div>
@@ -150,7 +192,7 @@ export default function HomePage() {
               </div>
               <button
                 onClick={() => setSelectedExam(null)}
-                className="text-slate-400 hover:text-white text-lg px-2"
+                className="text-slate-400 hover:text-white text-lg px-2 py-1 rounded-lg hover:bg-slate-800 transition"
               >
                 ✕
               </button>
@@ -165,7 +207,7 @@ export default function HomePage() {
 
               <div>
                 <span className="text-slate-400 block text-[11px]">คำชี้แจง / รายละเอียด:</span>
-                <p className="text-slate-300 bg-slate-800/60 p-3 rounded-xl border border-slate-800 leading-relaxed">
+                <p className="text-slate-300 bg-slate-950/60 p-3 rounded-xl border border-slate-800 leading-relaxed max-h-28 overflow-y-auto">
                   {selectedExam.description}
                 </p>
               </div>
@@ -191,24 +233,38 @@ export default function HomePage() {
               </div>
             </div>
 
-            {/* Actions */}
+            {/* Actions: Replaced browser alert with toast notification */}
             <div className="flex gap-2 pt-2">
               <button
-                onClick={() => {
-                  const url = `${window.location.origin}/gateway/${selectedExam.accessCode}`;
-                  navigator.clipboard.writeText(url);
-                  alert(`คัดลอกลิงก์ข้อสอบเรียบร้อยแล้ว!\n\n${url}`);
-                }}
-                className="px-3.5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl text-xs font-semibold transition border border-slate-700"
+                onClick={() => handleCopyLink(selectedExam.accessCode)}
+                className={`px-4 py-2.5 rounded-xl text-xs font-semibold transition border flex items-center justify-center gap-1.5 active:scale-95 ${
+                  copiedSuccess
+                    ? 'bg-emerald-600/30 border-emerald-500 text-emerald-300'
+                    : 'bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border-slate-700'
+                }`}
               >
-                📋 คัดลอกลิงก์
+                <span>{copiedSuccess ? '✓' : '📋'}</span>
+                <span>{copiedSuccess ? 'คัดลอกแล้ว!' : 'คัดลอกลิงก์'}</span>
               </button>
               <button
                 onClick={() => router.push(`/gateway/${selectedExam.accessCode}`)}
-                className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs transition shadow-lg shadow-emerald-700/30 flex items-center justify-center gap-1.5"
+                className="flex-1 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold rounded-xl text-xs transition shadow-lg shadow-emerald-900/40 flex items-center justify-center gap-1.5 active:scale-95"
               >
                 เข้าสู่ห้องสอบทันที 🚀
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 5. Modern Floating Toast Notification */}
+      {toastMessage && (
+        <div className="fixed bottom-6 right-6 z-[100] animate-in slide-in-from-bottom-4 fade-in duration-300">
+          <div className="px-4 py-3 bg-slate-900/95 border border-emerald-500/50 text-white rounded-2xl shadow-2xl backdrop-blur-xl flex items-center gap-3">
+            <span className="text-xl">✨</span>
+            <div className="text-xs">
+              <div className="font-bold text-emerald-400">แจ้งเตือนระบบ</div>
+              <div className="text-slate-300 text-[11px]">{toastMessage}</div>
             </div>
           </div>
         </div>

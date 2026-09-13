@@ -17,6 +17,7 @@ export default function StudentExamPage({
   const [gradingSummary, setGradingSummary] = useState<any>(null);
   const [sessionData, setSessionData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [showExitModal, setShowExitModal] = useState(false);
 
   // โหลดข้อมูล Session ที่นักเรียนกรอกมาจากหน้า Gateway
   useEffect(() => {
@@ -195,12 +196,10 @@ export default function StudentExamPage({
           <div className="space-y-2 pt-1">
             <button
               onClick={() => {
-                // พยายามปิดแท็บเบราว์เซอร์
                 if (typeof window !== 'undefined') {
                   window.close();
-                  // หากเบราว์เซอร์บล็อกการปิดแท็บอัตโนมัติ ให้แจ้งข้อความยืนยัน
-                  alert('✓ บันทึกผลสอบเรียบร้อยแล้ว คุณสามารถปิดหน้าต่างเบราว์เซอร์หรือปิดแอปพลิเคชันนี้ได้ทันที');
                 }
+                setShowExitModal(true);
               }}
               className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-2xl transition text-xs sm:text-sm shadow-lg shadow-emerald-900/30 flex items-center justify-center gap-1.5 active:scale-95"
             >
@@ -212,6 +211,34 @@ export default function StudentExamPage({
             </p>
           </div>
         </div>
+
+        {/* ป๊อปอัปแจ้งเตือนโมเดิร์นเมื่อกดออกจากระบบ (แทนที่ browser alert) */}
+        {showExitModal && (
+          <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200">
+            <div className="max-w-sm w-full bg-slate-900 border border-slate-700 rounded-3xl p-6 shadow-2xl text-center space-y-4">
+              <div className="w-16 h-16 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 flex items-center justify-center text-3xl mx-auto shadow-lg">
+                ✓
+              </div>
+              <div className="space-y-1.5">
+                <h3 className="text-lg font-bold text-white">บันทึกผลสอบเรียบร้อยแล้ว</h3>
+                <p className="text-xs text-slate-300 leading-relaxed">
+                  ระบบได้บันทึกคะแนนและล็อกสิทธิ์การสอบของคุณเรียบร้อยแล้ว คุณสามารถปิดหน้าต่างเบราว์เซอร์หรือแท็บนี้ได้ทันทีครับ
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  if (typeof window !== 'undefined') {
+                    window.close();
+                  }
+                  setShowExitModal(false);
+                }}
+                className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl transition shadow-lg shadow-emerald-900/40"
+              >
+                รับทราบและปิดหน้าต่าง
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
