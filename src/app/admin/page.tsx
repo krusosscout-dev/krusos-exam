@@ -137,12 +137,14 @@ export default function AdminDashboardPage() {
       {/* 1. Top Navbar */}
       <header className="bg-slate-900 border-b border-slate-800 px-6 py-3 flex items-center justify-between sticky top-0 z-30 shadow-md">
         <div className="flex items-center space-x-3">
-          <div className="w-9 h-9 rounded-lg bg-emerald-600 flex items-center justify-center font-bold text-white shadow-md">
-            ⚡
-          </div>
+          <img
+            src="/logo.png"
+            alt="โลโก้ระบบสอบออนไลน์"
+            className="w-10 h-10 object-contain drop-shadow-md"
+          />
           <div>
             <h1 className="text-sm font-bold text-white">ระบบจัดการข้อสอบ (Admin Portal)</h1>
-            <p className="text-xs text-slate-400">Krusos Smart Assessment • โรงเรียนวัดบางปูน</p>
+            <p className="text-xs text-slate-400">กลุ่มสาระสังคมศึกษาฯ • โรงเรียนวัดบางปูน</p>
           </div>
         </div>
 
@@ -263,19 +265,32 @@ export default function AdminDashboardPage() {
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2 pt-1">
+                  <div className="flex flex-col sm:flex-row items-center gap-2 pt-1">
+                    <button
+                      onClick={() => {
+                        const url = typeof window !== 'undefined'
+                          ? `${window.location.origin}/gateway/${exam.accessCode}`
+                          : `https://krusos-exam.vercel.app/gateway/${exam.accessCode}`;
+                        navigator.clipboard.writeText(url);
+                        alert(`คัดลอกลิงก์ข้อสอบวิชา ${exam.subjectName} (${exam.accessCode}) เรียบร้อยแล้ว!\n\nลิงก์: ${url}\n\nคุณครูสามารถนำไปวางในกลุ่ม LINE, Facebook หรือ Google Classroom ให้นักเรียนกรอกชื่อแล้วเริ่มสอบได้ทันที`);
+                      }}
+                      className="w-full sm:flex-1 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl transition flex items-center justify-center gap-1.5 shadow-md shadow-emerald-900/30"
+                    >
+                      📋 คัดลอกลิงก์ส่งให้นักเรียน
+                    </button>
                     <button
                       onClick={() => openQrModal(exam.accessCode)}
-                      className="flex-1 py-2 bg-slate-800 hover:bg-slate-700 text-xs font-bold rounded-xl transition text-slate-200 flex items-center justify-center gap-1.5 border border-slate-700"
+                      className="w-full sm:w-auto px-4 py-2 bg-slate-800 hover:bg-slate-700 text-xs font-bold rounded-xl transition text-slate-200 flex items-center justify-center gap-1.5 border border-slate-700"
                     >
-                      📱 แสดง QR Code
+                      📱 QR Code
                     </button>
                     <Link
                       href={`/gateway/${exam.accessCode}`}
                       target="_blank"
-                      className="flex-1 py-2 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 text-xs font-bold rounded-xl transition flex items-center justify-center gap-1.5 border border-emerald-500/30"
+                      className="w-full sm:w-auto px-3 py-2 bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-slate-200 text-xs font-bold rounded-xl transition flex items-center justify-center gap-1 border border-slate-700/60"
+                      title="เปิดดูหน้า Gateway ของนักเรียน"
                     >
-                      🔗 ลองเข้าสอบ
+                      👁️ ดูหน้าสอบ
                     </Link>
                   </div>
                 </div>

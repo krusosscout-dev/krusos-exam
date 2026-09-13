@@ -14,9 +14,27 @@ export default function StudentExamPage({
   const { sessionId } = params;
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [submissionResult, setSubmissionResult] = useState<any>(null);
+  const [sessionData, setSessionData] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Sample mixed questions
-  const sampleQuestions: QuestionDefinition[] = [
+  // โหลดข้อมูล Session ที่นักเรียนกรอกมาจากหน้า Gateway
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const stored = sessionStorage.getItem(`exam_session_${sessionId}`);
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored);
+          setSessionData(parsed);
+        } catch (e) {
+          console.error('Session parse error:', e);
+        }
+      }
+      setIsLoading(false);
+    }
+  }, [sessionId]);
+
+  // Default fallback questions if session is empty
+  const defaultQuestions: QuestionDefinition[] = [
     {
       id: 'q1',
       examId: 'ex-001',
@@ -30,6 +48,7 @@ export default function StudentExamPage({
         { id: 'c3', text: 'ไมโทคอนเดรีย (Mitochondria)' },
         { id: 'c4', text: 'กอลจิบอดี (Golgi Body)' },
       ],
+      answerKey: 'c2',
     },
     {
       id: 'q2',
@@ -38,6 +57,7 @@ export default function StudentExamPage({
       type: 'TRUE_FALSE',
       promptText: 'เซลล์สัตว์มีผนังเซลล์ (Cell Wall) ห่อหุ้มชั้นนอกสุดเหมือนเซลล์พืช',
       points: 1.0,
+      answerKey: 'false',
     },
     {
       id: 'q3',
@@ -46,6 +66,7 @@ export default function StudentExamPage({
       type: 'FILL_IN_BLANK',
       promptText: 'สารสีเขียวในพืชที่ทำหน้าที่ดูดกลืนพลังงานแสงเรียกว่าสารอะไร?',
       points: 2.0,
+      answerKey: ['คลอโรฟิลล์', 'คลอโรฟิล', 'chlorophyll'],
     },
     {
       id: 'q4',
@@ -66,20 +87,26 @@ export default function StudentExamPage({
           { id: 'r3', text: 'กักเก็บน้ำ สารอาหาร และของเสีย' },
         ],
       },
+      answerKey: { l1: 'r2', l2: 'r1', l3: 'r3' },
     },
     {
       id: 'q5',
       examId: 'ex-001',
       questionNumber: 5,
       type: 'ESSAY',
-      promptText: 'ให้นักเรียนอธิบายความแตกต่างที่สำคัญระหว่างเซลล์พืชและเซลล์สัตว์อย่างน้อย 3 ประการ พร้อมยกตัวอย่างประโยชน์ของความแตกต่างนั้น',
+      promptText: 'ให้นักเรียนอธิบายความแตกต่างที่สำคัญระหว่างเซลล์พืชและเซลล์สัตว์อย่างน้อย 3 ประการ พร้อมยกตัวอย่างหน้าที่สำคัญ',
       points: 5.0,
     },
   ];
 
+  const questionsToUse = (sessionData?.questions && sessionData.questions.length > 0)
+    ? sessionData.questions
+    : defaultQuestions;
+
   const handleSubmit = async (answers: StudentAnswerPayload[], isForced: boolean) => {
     try {
-      const res = await fetch('/api/exams/EXAM-SCI-01/submit', {
+      const accessCode = sessionData?.accessCode || 'EXAM-SCI-01';
+      const res = await fetch(`/api/exams/${accessCode}/submit`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -90,13 +117,24 @@ export default function StudentExamPage({
       });
 
       const data = await res.json();
-      setSubmissionResult(data.data || { autoGradedScore: 0, status: isForced ? 'FORCE_TERMINATED' : 'SUBMITTED' });
+      setSubmissionResult(data.data || {
+        autoGradedScore: 0,
+        status: isForced ? 'FORCE_TERMINATED' : 'SUBMITTED',
+      });
       setIsSubmitted(true);
     } catch (err) {
       console.error('Submit error:', err);
       setIsSubmitted(true);
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center text-slate-400 text-sm">
+        กำลังจัดเตรียมห้องสอบส่วนบุคคล...
+      </div>
+    );
+  }
 
   if (isSubmitted) {
     return (
@@ -105,24 +143,24 @@ export default function StudentExamPage({
           <div className="w-16 h-16 bg-emerald-500/20 text-emerald-400 rounded-full flex items-center justify-center mx-auto text-3xl font-bold">
             ✓
           </div>
-          <h2 className="text-2xl font-black text-white">ส่งคำตอบเรียบร้อยแล้ว</h2>
-          <p className="text-slate-400 text-sm">
-            ระบบได้บันทึกคำตอบของคุณลงฐานข้อมูลกลางอย่างปลอดภัย
+          <h2 className="text-2xl font-bold text-white">ส่งคำตอบเรียบร้อยแล้ว</h2>
+          <p className="text-slate-400 text-xs">
+            นักเรียน: <span className="text-white font-medium">{sessionData?.studentData?.studentName || 'ผู้เข้าสอบ'}</span> ({sessionData?.studentData?.studentIdCard || '-'})
           </p>
-          <div className="bg-slate-800/80 p-4 rounded-xl border border-slate-700 text-left space-y-1">
-            <p className="text-xs text-slate-400">สถานะการส่ง:</p>
+          <div className="bg-slate-800/80 p-4 rounded-xl border border-slate-700 text-left space-y-1 text-xs">
+            <p className="text-slate-400">สถานะการสอบ:</p>
             <p className="text-sm font-bold text-emerald-400">
               {submissionResult?.status === 'FORCE_TERMINATED'
-                ? 'ส่งอัตโนมัติ (เกินเกณฑ์ความปลอดภัย)'
-                : 'ส่งเรียบร้อยแล้ว'}
+                ? '⚠️ ถูกบังคับส่ง (เกินเกณฑ์ความปลอดภัย)'
+                : '✓ บันทึกคำตอบลงระบบกลางเรียบร้อย'}
             </p>
-            <p className="text-xs text-slate-400 pt-1">
-              * ข้อสอบอัตนัยจะได้รับการตรวจและประกาศผลโดยคุณครูผู้สอน
+            <p className="text-slate-400 pt-2 border-t border-slate-700/60">
+              * สำหรับข้อสอบอัตนัย คุณครูผู้สอนจะทำการตรวจและประกาศคะแนนสุทธิต่อไป
             </p>
           </div>
           <button
             onClick={() => router.push('/')}
-            className="w-full py-3 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold rounded-xl transition text-sm"
+            className="w-full py-3 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold rounded-xl transition text-xs"
           >
             กลับสู่หน้าหลัก
           </button>
@@ -133,15 +171,15 @@ export default function StudentExamPage({
 
   return (
     <ExamRoom
-      examTitle="แบบทดสอบวัดผลการเรียนรู้กลางภาคเรียนที่ 1/2569"
-      subjectName="วิทยาศาสตร์และเทคโนโลยี 1 (ว21101)"
-      studentName="ผู้เข้าสอบทดสอบ"
-      studentIdCard="54321"
-      classroomLabel="ม.1/1"
+      examTitle={sessionData?.examTitle || 'แบบทดสอบวัดผลการเรียนรู้'}
+      subjectName={sessionData?.subjectName || 'วิทยาศาสตร์และเทคโนโลยี 1 (ว21101)'}
+      studentName={sessionData?.studentData?.studentName || 'นักเรียน'}
+      studentIdCard={sessionData?.studentData?.studentIdCard || '54321'}
+      classroomLabel={sessionData?.studentData?.classroomId || 'ม.1/1'}
       sessionId={sessionId}
-      expiresAt={new Date(Date.now() + 60 * 60 * 1000).toISOString()}
-      maxViolations={3}
-      questions={sampleQuestions}
+      expiresAt={sessionData?.expiresAt || new Date(Date.now() + 60 * 60 * 1000).toISOString()}
+      maxViolations={sessionData?.maxViolations || 3}
+      questions={questionsToUse}
       onSubmitExam={handleSubmit}
     />
   );

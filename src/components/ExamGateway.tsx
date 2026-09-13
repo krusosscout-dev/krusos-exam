@@ -76,8 +76,13 @@ export const ExamGateway: React.FC<ExamGatewayProps> = ({
   return (
     <div className="min-h-screen bg-slate-950 flex flex-col justify-center items-center p-4">
       <div className="max-w-lg w-full bg-slate-900 border border-slate-800 rounded-3xl p-8 shadow-2xl space-y-6">
-        {/* Header */}
+        {/* Header with Logo */}
         <div className="text-center space-y-2 border-b border-slate-800 pb-6">
+          <img
+            src="/logo.png"
+            alt="โลโก้ระบบสอบออนไลน์"
+            className="w-20 h-20 mx-auto object-contain drop-shadow-md mb-2"
+          />
           <div className="inline-block px-3 py-1 bg-emerald-500/10 text-emerald-400 text-xs font-semibold rounded-full border border-emerald-500/20">
             ระบบจัดสอบออนไลน์วัดผลมาตรฐาน
           </div>

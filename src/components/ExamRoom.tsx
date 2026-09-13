@@ -89,11 +89,18 @@ export const ExamRoom: React.FC<ExamRoomProps> = ({
     <div className="min-h-screen bg-slate-900 text-slate-100 flex flex-col select-none">
       {/* 1. Header Bar: Info, Countdown & Violation Badge */}
       <header className="bg-slate-800 border-b border-slate-700 px-6 py-3 flex items-center justify-between sticky top-0 z-30 shadow-md">
-        <div>
-          <h1 className="text-lg font-bold text-white tracking-wide">{examTitle}</h1>
-          <p className="text-xs text-slate-400">
-            วิชา: <span className="text-emerald-400 font-medium">{subjectName}</span> | นร: {studentName} ({studentIdCard}) ห้อง {classroomLabel}
-          </p>
+        <div className="flex items-center space-x-3">
+          <img
+            src="/logo.png"
+            alt="โลโก้ระบบสอบออนไลน์"
+            className="w-10 h-10 object-contain drop-shadow-md hidden sm:block"
+          />
+          <div>
+            <h1 className="text-base sm:text-lg font-bold text-white tracking-wide">{examTitle}</h1>
+            <p className="text-xs text-slate-400">
+              วิชา: <span className="text-emerald-400 font-medium">{subjectName}</span> | นร: {studentName} ({studentIdCard}) ห้อง {classroomLabel}
+            </p>
+          </div>
         </div>
 
         <div className="flex items-center space-x-6">
