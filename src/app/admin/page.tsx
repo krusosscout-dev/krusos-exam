@@ -874,7 +874,10 @@ export default function AdminDashboardPage() {
             className="w-10 h-10 object-contain drop-shadow-md"
           />
           <div>
-            <h1 className="text-sm font-bold text-white">ระบบจัดการข้อสอบ (Admin Portal)</h1>
+            <h1 className="text-sm font-bold text-white flex items-center gap-1.5">
+              <span className="text-emerald-400 font-mono font-bold">KruSos Exam</span>
+              <span className="text-slate-300">• จัดการข้อสอบ (Admin)</span>
+            </h1>
             <p className="text-xs text-slate-400">กลุ่มสาระสังคมศึกษาฯ • โรงเรียนวัดบางปูน</p>
           </div>
         </div>

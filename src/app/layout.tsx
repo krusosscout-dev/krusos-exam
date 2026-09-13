@@ -17,8 +17,13 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: 'ระบบสอบออนไลน์ | โรงเรียนวัดบางปูน (Krusos Smart Assessment)',
-  description: 'แพลตฟอร์มสอบออนไลน์มาตรฐาน พร้อมระบบตรวจจับการทุจริตและการวิเคราะห์ข้อสอบรายข้อ',
+  title: 'KruSos Exam | ระบบสอบออนไลน์',
+  description: 'KruSos Exam - ระบบสอบออนไลน์ โรงเรียนวัดบางปูน สพป.สิงห์บุรี (ครูซอส)',
+  icons: {
+    icon: '/logo.png',
+    shortcut: '/logo.png',
+    apple: '/logo.png',
+  },
 };
 
 export default function RootLayout({

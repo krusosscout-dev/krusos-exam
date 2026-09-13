@@ -115,13 +115,13 @@ export default function HomePage() {
           <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 backdrop-blur-sm shadow-sm">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
             <span className="text-[10px] sm:text-[11px] font-bold tracking-widest text-emerald-400 uppercase">
-              KRUSOS SMART ASSESSMENT PLATFORM
+              KRUSOS EXAM • ระบบสอบออนไลน์
             </span>
           </div>
 
           {/* Main Headline */}
           <h1 className="text-2xl sm:text-3xl md:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white via-slate-100 to-slate-300 tracking-tight leading-tight">
-            ระบบวัดและประเมินผลการเรียนรู้อัจฉริยะ
+            ระบบสอบออนไลน์ โรงเรียนวัดบางปูน
           </h1>
 
           {/* Department & Teacher Metadata (คนละบรรทัด สวยงาม สมบูรณ์แบบ) */}
