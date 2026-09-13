@@ -3,7 +3,7 @@
 import React from 'react';
 import { useRouter } from 'next/navigation';
 import { ExamGateway } from '@/components/ExamGateway';
-import { getExamByAccessCode } from '@/services/examData';
+import { getExamByAccessCode, shuffleArray } from '@/services/examData';
 import Link from 'next/link';
 
 export default function GatewayPage({
@@ -38,7 +38,46 @@ export default function GatewayPage({
     classroomId: string;
   }) => {
     try {
-      // สร้าง Session ID เฉพาะสำหรับการสอบครั้งนี้
+      // 0. ตรวจสอบสถานะการเปิด/ปิดรับคำตอบ
+      if (typeof window !== 'undefined') {
+        const isClosedInStorage = localStorage.getItem(`exam_closed_${accessCode.toUpperCase()}`) === 'true';
+        if (isClosedInStorage || (exam && exam.isOpen === false)) {
+          return {
+            success: false,
+            errorMessage: '🔒 ขณะนี้แบบทดสอบนี้ได้ปิดรับคำตอบแล้ว กรุณาติดต่อคุณครูผู้สอนหากมีเหตุจำเป็น',
+          };
+        }
+      }
+
+      // 1. บังคับให้สอบได้เพียงคนละ 1 ครั้งเท่านั้น
+      if (typeof window !== 'undefined') {
+        const submittedKey = `submitted_${accessCode.toUpperCase()}_${studentData.studentIdCard.trim()}`;
+        if (localStorage.getItem(submittedKey)) {
+          return {
+            success: false,
+            errorMessage: `⚠️ ไม่อนุญาตให้สอบซ้ำ: เลขประจำตัว "${studentData.studentIdCard}" ได้ทำการส่งข้อสอบชุดนี้เรียบร้อยแล้ว (จำกัดสิทธิ์การสอบคนละ 1 ครั้งเท่านั้น หากมีเหตุขัดข้องกรุณาติดต่อคุณครูผู้สอน)`,
+          };
+        }
+      }
+
+      // 2. สลับข้อสอบและสลับตัวเลือกแบบสุ่ม (Shuffle) เพื่อป้องกันการลอกกัน
+      let processedQuestions = [...((exam && exam.questions) || [])];
+      if (exam?.shuffleQuestions) {
+        processedQuestions = shuffleArray(processedQuestions);
+      }
+      if (exam?.shuffleChoices) {
+        processedQuestions = processedQuestions.map((q) => {
+          if (q.type === 'MULTIPLE_CHOICE' && Array.isArray(q.optionsPayload)) {
+            return {
+              ...q,
+              optionsPayload: shuffleArray(q.optionsPayload),
+            };
+          }
+          return q;
+        });
+      }
+
+      // 3. สร้าง Session ID เฉพาะสำหรับการสอบครั้งนี้
       const demoSessionId = `sess_${Date.now()}_${studentData.studentIdCard}`;
       
       const sessionPayload = {
@@ -49,7 +88,7 @@ export default function GatewayPage({
         subjectName: `${currentExam.subjectCode} ${currentExam.subjectName}`,
         durationMinutes: currentExam.durationMinutes,
         maxViolations: (exam && exam.maxViolations) || 3,
-        questions: (exam && exam.questions) || [],
+        questions: processedQuestions,
         startedAt: new Date().toISOString(),
         expiresAt: new Date(Date.now() + currentExam.durationMinutes * 60 * 1000).toISOString(),
       };
@@ -67,12 +106,9 @@ export default function GatewayPage({
 
   return (
     <div className="min-h-screen bg-slate-950 flex flex-col justify-between p-4">
-      {/* Top Breadcrumb */}
-      <div className="max-w-lg w-full mx-auto pt-4 flex items-center justify-between text-xs text-slate-400">
-        <Link href="/" className="hover:text-emerald-400 transition flex items-center gap-1">
-          ← กลับหน้าหลัก
-        </Link>
-        <span className="font-mono bg-slate-900 px-2 py-1 rounded border border-slate-800 text-emerald-400">
+      {/* Top Info Bar (ตัดปุ่มกลับหน้าหลักออก เพื่อให้นักเรียนโฟกัสเฉพาะการสอบ) */}
+      <div className="max-w-lg w-full mx-auto pt-4 flex items-center justify-end text-xs text-slate-400">
+        <span className="font-mono bg-slate-900 px-3 py-1 rounded-xl border border-slate-800 text-emerald-400 font-semibold">
           รหัสข้อสอบ: {accessCode.toUpperCase()}
         </span>
       </div>

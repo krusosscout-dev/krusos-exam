@@ -187,12 +187,28 @@ export function gradeStudentSubmission(
 
   let autoGradedScore = 0;
   let hasManualQuestions = false;
+  let objectiveScore = 0;
+  let objectiveMaxPoints = 0;
+  let supplementaryScore = 0;
+  let supplementaryMaxPoints = 0;
   const questionResults: AutoGradingResult[] = [];
 
   for (const q of questions) {
     const studentAns = answerMap.get(q.id);
     const result = evaluateQuestionAnswer(q, studentAns);
     questionResults.push(result);
+
+    // Rule: บอกคะแนนเพียง ปรนัย (MULTIPLE_CHOICE), จับคู่ (MATCHING), ถูก/ผิด (TRUE_FALSE) เท่านั้น
+    const isObjectiveType = ['MULTIPLE_CHOICE', 'MATCHING', 'TRUE_FALSE'].includes(q.type);
+
+    if (isObjectiveType) {
+      objectiveScore += result.scoreAwarded;
+      objectiveMaxPoints += result.maxPoints;
+    } else {
+      // ประเภทอื่น เช่น อัตนัย (ESSAY) หรือ เติมคำ เป็นคะแนนเสริม
+      supplementaryScore += result.scoreAwarded;
+      supplementaryMaxPoints += result.maxPoints;
+    }
 
     if (result.isAutoGraded) {
       autoGradedScore += result.scoreAwarded;
@@ -201,8 +217,20 @@ export function gradeStudentSubmission(
     }
   }
 
-  // Round auto-score to 2 decimal places
+  // Round scores to 2 decimal places
   autoGradedScore = Number(autoGradedScore.toFixed(2));
+  objectiveScore = Number(objectiveScore.toFixed(2));
+  objectiveMaxPoints = Number(objectiveMaxPoints.toFixed(2));
+
+  // Determine Supplementary Status: ผ่าน/ไม่ผ่าน (เกณฑ์ 50% ขึ้นไป) หรือ รอตรวจ
+  let supplementaryStatus: 'PASS' | 'FAIL' | 'PENDING' = 'PASS';
+  if (supplementaryMaxPoints > 0) {
+    if (hasManualQuestions) {
+      supplementaryStatus = 'PENDING';
+    } else {
+      supplementaryStatus = supplementaryScore >= supplementaryMaxPoints * 0.5 ? 'PASS' : 'FAIL';
+    }
+  }
 
   let finalStatus: SessionStatus;
   if (isForcedSubmission) {
@@ -218,6 +246,9 @@ export function gradeStudentSubmission(
     autoGradedScore,
     manualGradedScore: 0,
     totalScore: autoGradedScore,
+    objectiveScore,
+    objectiveMaxPoints,
+    supplementaryStatus,
     allAutoGraded: !hasManualQuestions,
     status: finalStatus,
     questionResults,

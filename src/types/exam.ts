@@ -73,6 +73,9 @@ export interface OverallGradingSummary {
   autoGradedScore: number;
   manualGradedScore: number;
   totalScore: number;
+  objectiveScore: number;      // คะแนนปรนัย, จับคู่, ถูก/ผิด เท่านั้น
+  objectiveMaxPoints: number;  // คะแนนเต็มส่วนปรนัย/จับคู่/ถูกผิด
+  supplementaryStatus: 'PASS' | 'FAIL' | 'PENDING'; // คะแนนเสริม บอกแค่ ผ่าน/ไม่ผ่าน/รอตรวจ
   allAutoGraded: boolean;
   status: SessionStatus;
   questionResults: AutoGradingResult[];

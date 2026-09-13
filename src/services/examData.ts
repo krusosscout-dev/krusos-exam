@@ -8,11 +8,27 @@ export interface ExamRecord {
   title: string;
   description: string;
   durationMinutes: number;
+  emoji: string;
   classrooms: Array<{ id: string; gradeLevel: string; roomNumber: string }>;
   maxViolations: number;
   totalStudents: number;
   status: 'PUBLISHED' | 'DRAFT';
+  isOpen: boolean;                // สวิตช์ เปิด/ปิดรับคำตอบ
+  shuffleQuestions?: boolean;     // สลับข้อสอบ
+  shuffleChoices?: boolean;       // สลับตัวเลือก
   questions: QuestionDefinition[];
+}
+
+/**
+ * สลับลำดับสมาชิกใน Array แบบสุ่ม (Fisher-Yates Shuffle)
+ */
+export function shuffleArray<T>(array: T[]): T[] {
+  const arr = [...array];
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
 }
 
 export const INITIAL_EXAMS: ExamRecord[] = [
@@ -24,6 +40,10 @@ export const INITIAL_EXAMS: ExamRecord[] = [
     title: 'แบบทดสอบกลางภาคเรียนที่ 1/2569 (หน่วยหน้าที่พลเมืองและกฎหมายในชีวิตประจำวัน)',
     description: 'การปฏิบัติตนตามกฎหมาย สิทธิมนุษยชน และการมีส่วนร่วมในระบอบประชาธิปไตย ชั้น ม.1',
     durationMinutes: 60,
+    emoji: '🏛️',
+    isOpen: true,
+    shuffleQuestions: true,
+    shuffleChoices: true,
     classrooms: [
       { id: 'c1', gradeLevel: 'ม.1', roomNumber: '1' },
       { id: 'c2', gradeLevel: 'ม.1', roomNumber: '2' },
@@ -105,6 +125,10 @@ export const INITIAL_EXAMS: ExamRecord[] = [
     title: 'แบบทดสอบเก็บคะแนน เรื่อง พัฒนาการของอาณาจักรสุโขทัยและอยุธยา',
     description: 'การสถาปนา การเมืองการปกครอง ศิลปวัฒนธรรม และบุคคลสำคัญ ชั้น ม.1',
     durationMinutes: 50,
+    emoji: '📜',
+    isOpen: true,
+    shuffleQuestions: true,
+    shuffleChoices: true,
     classrooms: [
       { id: 'c1', gradeLevel: 'ม.1', roomNumber: '1' },
       { id: 'c2', gradeLevel: 'ม.1', roomNumber: '2' },
@@ -147,6 +171,10 @@ export const INITIAL_EXAMS: ExamRecord[] = [
     title: 'แบบประเมินความรู้ เรื่อง STRONG: จิตพอเพียงต้านทุจริต',
     description: 'การแยกแยะระหว่างประโยชน์ส่วนตนกับประโยชน์ส่วนรวม และความละอายต่อการทุจริต',
     durationMinutes: 40,
+    emoji: '⚖️',
+    isOpen: true,
+    shuffleQuestions: true,
+    shuffleChoices: true,
     classrooms: [
       { id: 'c1', gradeLevel: 'ม.1', roomNumber: '1' },
       { id: 'c2', gradeLevel: 'ม.1', roomNumber: '2' },
@@ -183,7 +211,35 @@ export const INITIAL_EXAMS: ExamRecord[] = [
   },
 ];
 
+export function getAllExams(): ExamRecord[] {
+  if (typeof window !== 'undefined') {
+    try {
+      const stored = localStorage.getItem('krusos_exams_data');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
+      }
+    } catch (e) {
+      console.error('Failed to load exams from localStorage:', e);
+    }
+  }
+  return INITIAL_EXAMS;
+}
+
+export function saveExamsToStorage(exams: ExamRecord[]): void {
+  if (typeof window !== 'undefined') {
+    try {
+      localStorage.setItem('krusos_exams_data', JSON.stringify(exams));
+    } catch (e) {
+      console.error('Failed to save exams to localStorage:', e);
+    }
+  }
+}
+
 export function getExamByAccessCode(code: string): ExamRecord | undefined {
   const clean = code.trim().toUpperCase();
-  return INITIAL_EXAMS.find((e) => e.accessCode.toUpperCase() === clean);
+  const all = getAllExams();
+  return all.find((e) => e.accessCode.toUpperCase() === clean);
 }

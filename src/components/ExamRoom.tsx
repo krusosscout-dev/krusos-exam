@@ -27,7 +27,15 @@ export const ExamRoom: React.FC<ExamRoomProps> = ({
   questions,
   onSubmitExam,
 }) => {
-  const [answers, setAnswers] = useState<Record<string, any>>({});
+  const [answers, setAnswers] = useState<Record<string, any>>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = sessionStorage.getItem(`exam_draft_${sessionId}`);
+        if (saved) return JSON.parse(saved);
+      } catch (e) {}
+    }
+    return {};
+  });
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState<number>(0);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [showConfirmSubmit, setShowConfirmSubmit] = useState<boolean>(false);
@@ -35,6 +43,9 @@ export const ExamRoom: React.FC<ExamRoomProps> = ({
   const handleForceSubmit = async () => {
     if (isSubmitting) return;
     setIsSubmitting(true);
+    if (typeof window !== 'undefined') {
+      sessionStorage.removeItem(`exam_draft_${sessionId}`);
+    }
     const payload: StudentAnswerPayload[] = questions.map((q) => ({
       questionId: q.id,
       response: answers[q.id] ?? null,
@@ -78,7 +89,15 @@ export const ExamRoom: React.FC<ExamRoomProps> = ({
   };
 
   const updateAnswer = (questionId: string, val: any) => {
-    setAnswers((prev) => ({ ...prev, [questionId]: val }));
+    setAnswers((prev) => {
+      const next = { ...prev, [questionId]: val };
+      if (typeof window !== 'undefined') {
+        try {
+          sessionStorage.setItem(`exam_draft_${sessionId}`, JSON.stringify(next));
+        } catch (e) {}
+      }
+      return next;
+    });
   };
 
   const activeQuestion = questions[currentQuestionIndex];
@@ -96,7 +115,12 @@ export const ExamRoom: React.FC<ExamRoomProps> = ({
             className="w-10 h-10 object-contain drop-shadow-md hidden sm:block"
           />
           <div>
-            <h1 className="text-base sm:text-lg font-bold text-white tracking-wide">{examTitle}</h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-base sm:text-lg font-bold text-white tracking-wide">{examTitle}</h1>
+              <span className="text-[10px] text-emerald-400 bg-emerald-950/80 border border-emerald-700 px-2 py-0.5 rounded-full hidden md:inline-flex items-center gap-1 font-medium">
+                💾 บันทึกคำตอบร่างอัตโนมัติ
+              </span>
+            </div>
             <p className="text-xs text-slate-400">
               วิชา: <span className="text-emerald-400 font-medium">{subjectName}</span> | นร: {studentName} ({studentIdCard}) ห้อง {classroomLabel}
             </p>
@@ -417,6 +441,9 @@ export const ExamRoom: React.FC<ExamRoomProps> = ({
                 disabled={isSubmitting}
                 onClick={async () => {
                   setIsSubmitting(true);
+                  if (typeof window !== 'undefined') {
+                    sessionStorage.removeItem(`exam_draft_${sessionId}`);
+                  }
                   const payload: StudentAnswerPayload[] = questions.map((q) => ({
                     questionId: q.id,
                     response: answers[q.id] ?? null,
