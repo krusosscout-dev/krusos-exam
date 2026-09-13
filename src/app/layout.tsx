@@ -1,13 +1,13 @@
 import type { Metadata } from 'next';
-import { Kanit } from 'next/font/google';
+import { Prompt } from 'next/font/google';
 import './globals.css';
 
-// ใช้ฟอนต์ Kanit (คณิต) - โมเดิร์น ไม่มีหัว ชัดเจน สไตล์ EdTech ยอดนิยม
-const kanit = Kanit({
+// ใช้ฟอนต์ Prompt (พร้อมท์) - โมเดิร์น ทันสมัย อ่านง่าย ชัดเจน สไตล์มินิมอลยอดนิยม
+const prompt = Prompt({
   weight: ['300', '400', '500', '600', '700'],
   subsets: ['thai', 'latin'],
   display: 'swap',
-  variable: '--font-kanit',
+  variable: '--font-prompt',
 });
 
 export const metadata: Metadata = {
@@ -21,8 +21,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="th" className={kanit.variable}>
-      <body className={`${kanit.className} antialiased bg-slate-950 text-slate-100 selection:bg-emerald-500 selection:text-white`}>
+    <html lang="th" className={prompt.variable}>
+      <body className={`${prompt.className} antialiased bg-slate-950 text-slate-100 selection:bg-emerald-500 selection:text-white`}>
         {children}
       </body>
     </html>

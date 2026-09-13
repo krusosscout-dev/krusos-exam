@@ -24,55 +24,37 @@ export default function HomePage() {
 
   return (
     <div className="h-screen w-screen overflow-hidden flex flex-col justify-between bg-[#040711] text-slate-100 p-3 sm:p-5 select-none font-sans">
-      {/* 1. Header Bar: Compact & Clean */}
-      <header className="max-w-5xl w-full mx-auto flex items-center justify-between py-1.5 border-b border-slate-800/80">
-        <div className="flex items-center space-x-2.5">
-          <img
-            src="/logo.png"
-            alt="โลโก้โรงเรียนวัดบางปูน"
-            className="w-9 h-9 object-contain drop-shadow-md"
-          />
-          <div>
-            <span className="text-xs sm:text-sm font-bold text-white tracking-wide block leading-tight">
-              โรงเรียนวัดบางปูน
-            </span>
-            <span className="text-[10px] sm:text-[11px] text-emerald-400 font-normal block">
-              ระบบสอบออนไลน์ • สังคมศึกษา ประวัติศาสตร์ และป้องกันทุจริต
-            </span>
-          </div>
-        </div>
-
+      {/* 1. Header Bar: Minimal Right Icon Only */}
+      <header className="max-w-5xl w-full mx-auto flex items-center justify-end py-1 sm:py-2">
         <Link
           href="/admin"
-          className="flex items-center space-x-1.5 px-3 py-1.5 bg-slate-900/90 hover:bg-slate-800 border border-slate-700/80 hover:border-emerald-500/60 rounded-xl text-[11px] sm:text-xs font-semibold text-slate-200 hover:text-white transition shadow-sm group"
+          title="เข้าระบบครูผู้สอน (Admin)"
+          className="p-2 sm:p-2.5 bg-slate-900/90 hover:bg-slate-800 border border-slate-800 hover:border-emerald-500/60 rounded-xl text-slate-400 hover:text-emerald-400 transition shadow-sm flex items-center justify-center group"
         >
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-          <span>เข้าระบบครูผู้สอน (Admin)</span>
-          <span className="text-slate-400 group-hover:translate-x-0.5 transition text-[10px]">→</span>
+          <svg className="w-5 h-5 transition-transform group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+          </svg>
         </Link>
       </header>
 
       {/* 2. Main Hero Content (Strictly Single-Screen Height Fit) */}
       <main className="max-w-3xl w-full mx-auto flex flex-col items-center justify-center text-center my-auto space-y-3 sm:space-y-4">
-        {/* Transparent Circular Logo */}
+        {/* Large Transparent Circular Logo */}
         <div className="relative">
           <img
             src="/logo.png"
             alt="โลโก้ระบบสอบออนไลน์"
-            className="w-16 h-16 sm:w-20 sm:h-20 object-contain drop-shadow-[0_8px_20px_rgba(0,0,0,0.7)] hover:scale-105 transition-transform"
+            className="w-28 h-28 sm:w-36 sm:h-36 md:w-44 md:h-44 object-contain drop-shadow-[0_12px_28px_rgba(0,0,0,0.85)] hover:scale-105 transition-transform"
           />
         </div>
 
         {/* Title */}
         <div className="space-y-0.5">
-          <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] sm:text-xs font-normal">
-            <span>🏛️</span> รายวิชาสังคมศึกษา ประวัติศาสตร์ และป้องกันทุจริต
-          </div>
-          <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight pt-1">
+          <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
             ระบบสอบออนไลน์
           </h1>
           <p className="text-slate-400 text-xs sm:text-sm font-normal">
-            วัดผลมาตรฐานและวิเคราะห์ข้อสอบเชิงลึก • โรงเรียนวัดบางปูน
+            โรงเรียนวัดบางปูน
           </p>
         </div>
 
@@ -143,8 +125,8 @@ export default function HomePage() {
       </main>
 
       {/* 3. Footer Bar: Minimal & Fit */}
-      <footer className="w-full max-w-5xl mx-auto py-1 text-center text-[10px] sm:text-[11px] text-slate-600 border-t border-slate-900/80">
-        โรงเรียนวัดบางปูน • พัฒนาสื่อการเรียนรู้ 2569 โดยครูซอส
+      <footer className="w-full max-w-5xl mx-auto py-1 text-center text-[10px] sm:text-[11px] text-slate-500 border-t border-slate-900/80">
+        © 2026 เพจตามติดชีวิต KruSos
       </footer>
 
       {/* 4. Exam Detail Modal (ป๊อปอัปดูรายละเอียดวิชาสอบ) */}
