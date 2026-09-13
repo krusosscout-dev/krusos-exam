@@ -12,6 +12,17 @@ export default function HomePage() {
   const [copiedSuccess, setCopiedSuccess] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const router = useRouter();
+  const scrollRef = React.useRef<HTMLDivElement>(null);
+
+  const handleScroll = (direction: 'left' | 'right') => {
+    if (scrollRef.current) {
+      const scrollAmount = 220;
+      scrollRef.current.scrollBy({
+        left: direction === 'left' ? -scrollAmount : scrollAmount,
+        behavior: 'smooth',
+      });
+    }
+  };
 
   useEffect(() => {
     const loaded = getAllExams();
@@ -52,16 +63,37 @@ export default function HomePage() {
       <div className="absolute top-1/3 -left-20 w-80 h-80 bg-blue-600/10 rounded-full blur-[100px] pointer-events-none" />
       <div className="absolute bottom-10 right-0 w-80 h-80 bg-emerald-700/10 rounded-full blur-[110px] pointer-events-none" />
 
-      {/* 1. Header Bar: Minimal Right Lock Icon Only */}
-      <header className="relative z-10 max-w-5xl w-full mx-auto flex items-center justify-end py-1">
+      {/* 1. Header Bar: School Badge (Left) + Live Status (Center) + Admin Gate (Right) */}
+      <header className="relative z-10 max-w-5xl w-full mx-auto flex items-center justify-between py-1 px-1 sm:px-2">
+        {/* Left: School Identity */}
+        <div className="flex items-center space-x-2.5">
+          <div className="w-8 h-8 rounded-xl bg-slate-900/90 border border-slate-800 p-1 flex items-center justify-center shadow-inner">
+            <img src="/logo.png" alt="โลโก้โรงเรียนวัดบางปูน" className="w-full h-full object-contain" />
+          </div>
+          <div className="text-left leading-tight">
+            <span className="text-xs font-bold text-slate-200 block">โรงเรียนวัดบางปูน</span>
+            <span className="text-[10px] text-slate-500 hidden sm:block">สพป.สิงห์บุรี</span>
+          </div>
+        </div>
+
+        {/* Center: System Status Pill */}
+        <div className="hidden md:flex items-center gap-2 px-3 py-1 rounded-full bg-slate-900/80 border border-slate-800 text-[11px] text-slate-400 shadow-sm backdrop-blur-md">
+          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+          <span className="text-slate-300 font-medium">ระบบออนไลน์พร้อมใช้งาน</span>
+          <span className="text-slate-600">•</span>
+          <span className="text-emerald-400 font-mono text-[10px]">ปีการศึกษา 2569</span>
+        </div>
+
+        {/* Right: Admin Gateway Button with Label */}
         <Link
           href="/admin"
           title="เข้าระบบครูผู้สอน (Admin Portal)"
-          className="p-2 sm:p-2.5 bg-slate-900/80 hover:bg-slate-800/90 border border-slate-800 hover:border-emerald-500/60 rounded-xl text-slate-400 hover:text-emerald-400 transition-all shadow-md backdrop-blur-md flex items-center justify-center group"
+          className="px-3 py-1.5 bg-slate-900/90 hover:bg-slate-800 border border-slate-800 hover:border-emerald-500/60 rounded-xl text-slate-300 hover:text-emerald-400 transition-all shadow-sm backdrop-blur-md flex items-center gap-2 group text-xs font-medium"
         >
-          <svg className="w-4 h-4 sm:w-5 sm:h-5 transition-transform group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-4 h-4 text-emerald-400 transition-transform group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
           </svg>
+          <span className="hidden sm:inline">สำหรับครูผู้สอน</span>
         </Link>
       </header>
 
@@ -142,7 +174,7 @@ export default function HomePage() {
           </form>
         </div>
 
-        {/* Active Exams Section with Emojis & Click-to-View Details */}
+        {/* Active Exams Section with Auto-Centering & Slider for >3 items */}
         <div className="w-full max-w-2xl pt-0.5 space-y-2">
           <div className="flex items-center justify-between text-[11px] px-1">
             <span className="font-bold text-slate-300 flex items-center gap-1.5">
@@ -151,13 +183,42 @@ export default function HomePage() {
               </span>
               <span>วิชาที่กำลังเปิดสอบ {exams.length > 0 ? `(${exams.length} วิชา)` : ''}</span>
             </span>
-            <span className="text-slate-500 text-[10px]">
-              {exams.length > 0 ? 'แตะที่วิชาเพื่อดูคำชี้แจงและเริ่มสอบ' : 'สถานะห้องสอบ'}
-            </span>
+
+            <div className="flex items-center gap-2">
+              <span className="text-slate-500 text-[10px]">
+                {exams.length > 3 ? 'เลื่อนซ้าย-ขวาเพื่อดูวิชาเพิ่ม' : 'แตะที่วิชาเพื่อดูคำชี้แจงและเริ่มสอบ'}
+              </span>
+              {exams.length > 3 && (
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => handleScroll('left')}
+                    className="w-5 h-5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center text-xs font-bold transition border border-slate-700 active:scale-90 shadow-sm"
+                    title="เลื่อนไปทางซ้าย"
+                  >
+                    ‹
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleScroll('right')}
+                    className="w-5 h-5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center text-xs font-bold transition border border-slate-700 active:scale-90 shadow-sm"
+                    title="เลื่อนไปทางขวา"
+                  >
+                    ›
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
 
           {exams.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-2.5">
+            <div
+              ref={scrollRef}
+              className={`flex gap-2 sm:gap-2.5 overflow-x-auto pb-1 scroll-smooth ${
+                exams.length <= 3 ? 'justify-center flex-wrap' : 'justify-start'
+              }`}
+              style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+            >
               {exams.map((exam) => (
                 <button
                   key={exam.id}
@@ -165,7 +226,7 @@ export default function HomePage() {
                     setSelectedExam(exam);
                     setCopiedSuccess(false);
                   }}
-                  className="bg-slate-900/80 hover:bg-slate-800/90 backdrop-blur-md border border-slate-800/90 hover:border-emerald-500/60 p-2.5 sm:p-3 rounded-2xl text-left transition shadow-md flex items-center space-x-3 group hover:-translate-y-0.5 duration-200"
+                  className="w-full sm:w-[205px] flex-shrink-0 bg-slate-900/80 hover:bg-slate-800/90 backdrop-blur-md border border-slate-800/90 hover:border-emerald-500/60 p-2.5 sm:p-3 rounded-2xl text-left transition shadow-md flex items-center space-x-3 group hover:-translate-y-0.5 duration-200"
                 >
                   <div className="w-10 h-10 rounded-xl bg-slate-800/90 group-hover:bg-emerald-500/20 border border-slate-700/50 group-hover:border-emerald-500/30 flex items-center justify-center text-xl shrink-0 transition">
                     {exam.emoji || '📝'}

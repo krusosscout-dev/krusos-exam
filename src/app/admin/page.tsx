@@ -865,9 +865,11 @@ export default function AdminDashboardPage() {
                       <Link
                         href={`/gateway/${exam.accessCode}`}
                         target="_blank"
-                        className="px-3 py-2 bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-slate-200 text-xs font-bold rounded-xl transition flex items-center justify-center gap-1 border border-slate-700/60"
+                        className="px-3 py-2 bg-slate-800/90 hover:bg-slate-700 text-slate-300 hover:text-emerald-400 text-xs font-bold rounded-xl transition flex items-center justify-center gap-1.5 border border-slate-700 hover:border-emerald-500/50 shadow-sm"
+                        title="เปิดดูหน้าห้องสอบจริงในมุมมองของนักเรียน"
                       >
-                        👁️ หน้าสอบ
+                        <span>👁️</span>
+                        <span>ดูมุมมองนักเรียน</span>
                       </Link>
                       <button
                         onClick={() => handleDeleteExam(exam.accessCode, exam.title)}
@@ -900,10 +902,19 @@ export default function AdminDashboardPage() {
                   </p>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <span className="text-xs text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded-full font-bold border border-emerald-500/20">
                     มีข้อสอบในวิชานี้ {activeQuestionExam?.questions.length || 0} ข้อ
                   </span>
+                  <Link
+                    href={`/gateway/${activeQuestionExam?.accessCode}`}
+                    target="_blank"
+                    className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-emerald-400 text-xs font-bold rounded-xl transition flex items-center gap-1.5 border border-slate-700 hover:border-emerald-500/50 shadow-sm"
+                    title="ทดลองเข้าทำข้อสอบชุดนี้ในมุมมองของนักเรียน"
+                  >
+                    <span>👁️</span>
+                    <span>ดูมุมมองนักเรียน (ทดลองสอบ)</span>
+                  </Link>
                   <button
                     onClick={() => {
                       resetQuestionForm();
