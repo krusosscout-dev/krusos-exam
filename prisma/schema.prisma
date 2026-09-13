@@ -1,0 +1,284 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// -------------------------------------------------------------
+// ENUMS
+// -------------------------------------------------------------
+
+enum UserRole {
+  ADMIN
+  TEACHER
+}
+
+enum QuestionType {
+  MULTIPLE_CHOICE // ปรนัยหลายตัวเลือก
+  TRUE_FALSE      // ถูก/ผิด
+  FILL_IN_BLANK   // เติมคำในช่องว่าง
+  MATCHING        // จับคู่
+  ESSAY           // อัตนัย/บรรยาย (ตรวจโดยครู)
+}
+
+enum ExamStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum SessionStatus {
+  IN_PROGRESS // กำลังสอบ
+  SUBMITTED   // ส่งข้อสอบแล้ว (ตรวจอัตโนมัติเสร็จ หรือรอตรวจอัตนัย)
+  GRADED      // ตรวจครบถ้วนทุกข้อแล้ว
+  FORCE_TERMINATED // โดนบังคับส่งเนื่องจากทำผิดกฎเกินกำหนด
+  TIMED_OUT   // หมดเวลาสอบ
+}
+
+enum ViolationType {
+  TAB_SWITCH        // สลับแท็บ / ยุบเบราว์เซอร์
+  WINDOW_BLUR       // คลิกออกนอกหน้าต่างสอบ
+  FULLSCREEN_EXIT   // ออกจากโหมดเต็มหน้าจอ
+  CLIPBOARD_ATTEMPT // พยายาม Copy / Paste
+  DEVTOOLS_OPEN     // พยายามเปิด Developer Tools
+  SUSPICIOUS_KEY    // กดคีย์ลัดต้องห้าม เช่น Alt+Tab, PrintScreen
+}
+
+// -------------------------------------------------------------
+// MODELS
+// -------------------------------------------------------------
+
+/// ตารางข้อมูลอาจารย์/ผู้ดูแลระบบ
+model User {
+  id           String    @id @default(uuid())
+  email        String    @unique
+  passwordHash String
+  fullName     String
+  role         UserRole  @default(TEACHER)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  subjects     Subject[]
+  examsCreated Exam[]    @relation("TeacherExams")
+}
+
+/// ตารางวิชา
+model Subject {
+  id          String      @id @default(uuid())
+  code        String      // รหัสวิชา เช่น ว21101, MA101
+  name        String      // ชื่อวิชา เช่น วิทยาศาสตร์ ม.1
+  description String?
+  teacherId   String
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  teacher     User        @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  classrooms  Classroom[]
+  exams       Exam[]
+
+  @@unique([code, teacherId])
+  @@index([teacherId])
+}
+
+/// ตารางห้องเรียน/ระดับชั้น
+model Classroom {
+  id          String           @id @default(uuid())
+  gradeLevel  String           // เช่น ม.1, ป.6, Grade 7
+  roomNumber  String           // เช่น 1, 2, 3 (ห้อง 1, ห้อง 2)
+  subjectId   String
+  createdAt   DateTime         @default(now())
+
+  subject     Subject          @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  examClasses ExamClassroom[]
+  sessions    StudentSession[]
+
+  @@unique([subjectId, gradeLevel, roomNumber])
+  @@index([subjectId])
+}
+
+/// ตารางชุดข้อสอบ
+model Exam {
+  id                  String           @id @default(uuid())
+  subjectId           String
+  creatorId           String
+  title               String           // ชื่อการสอบ เช่น สอบกลางภาค 1/2569
+  description         String?
+  accessCode          String           @unique // Unique Short Code สำหรับ Direct URL / QR Code (เช่น EXAM-BIO-001)
+  
+  // การกำหนดเวลา
+  startTime           DateTime         // เวลาเริ่มเปิดให้เข้าสอบ
+  endTime             DateTime         // เวลาสิ้นสุดการสอบ
+  durationMinutes     Int              // ระยะเวลาในการทำข้อสอบ เช่น 60 นาที
+  
+  // นโยบาย Anti-Cheat และการจัดสอบ
+  maxViolations       Int              @default(3) // จำนวนครั้งสูงสุดที่อนุญาตให้หลุดจอ ก่อนบังคับส่ง
+  shuffleQuestions    Boolean          @default(true) // สลับข้อสอบ
+  shuffleChoices      Boolean          @default(true) // สลับตัวเลือก
+  allowReview         Boolean          @default(false) // ให้นักเรียนดูผลคะแนนและเฉลยทันทีหลังสอบหรือไม่
+  isScoresPublished   Boolean          @default(false) // ครูสั่งประกาศคะแนนสุทธิหลังตรวจอัตนัยเสร็จสิ้น
+  status              ExamStatus       @default(DRAFT)
+
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+
+  subject             Subject          @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  creator             User             @relation("TeacherExams", fields: [creatorId], references: [id])
+  questions           Question[]
+  eligibleClassrooms  ExamClassroom[]
+  studentSessions     StudentSession[]
+  itemAnalytics       ItemAnalytic[]
+
+  @@index([accessCode])
+  @@index([subjectId])
+  @@index([startTime, endTime])
+}
+
+/// Pivot Table ผูก Exam เข้ากับ Classroom หลายห้อง
+model ExamClassroom {
+  id          String    @id @default(uuid())
+  examId      String
+  classroomId String
+
+  exam        Exam      @relation(fields: [examId], references: [id], onDelete: Cascade)
+  classroom   Classroom @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+
+  @@unique([examId, classroomId])
+  @@index([examId])
+  @@index([classroomId])
+}
+
+/// ตารางข้อสอบ
+model Question {
+  id             String         @id @default(uuid())
+  examId         String
+  questionNumber Int            // ลำดับข้อตั้งต้น
+  type           QuestionType
+  promptText     String         // คำถาม (รองรับ Markdown หรือ HTML)
+  mediaUrl       String?        // รูปภาพ/วิดีโอประกอบโจทย์
+  points         Float          @default(1.0) // คะแนนเต็มของข้อนี้
+  
+  // โครงสร้างตัวเลือกและเฉลยเก็บเป็น JSON รองรับความยืดหยุ่นสูง
+  // Multiple Choice / True-False: [{ id: "c1", text: "..." }]
+  // Matching: { left: [{ id: "l1", text: "..." }], right: [{ id: "r1", text: "..." }] }
+  optionsPayload Json?
+  
+  // เฉลย (เก็บฝั่งเซิร์ฟเวอร์เท่านั้น ห้ามส่งไป Client เด็ดขาดก่อนสอบเสร็จ)
+  // Multiple Choice: ["c1"]
+  // Fill in blank: ["คำตอบ1", "คำตอบสำรอง"] (Regex หรือ array)
+  // Matching: { "l1": "r2", "l2": "r1" }
+  // Essay: เกณฑ์การให้คะแนน (Rubric criteria) หรือ null
+  answerKey      Json?
+
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  exam           Exam           @relation(fields: [examId], references: [id], onDelete: Cascade)
+  studentAnswers StudentAnswer[]
+  itemAnalytic   ItemAnalytic?
+
+  @@index([examId])
+}
+
+/// ตารางบันทึก Session การเข้าสอบของนักเรียน
+model StudentSession {
+  id               String          @id @default(uuid())
+  examId           String
+  classroomId      String
+  
+  studentIdCard    String          // รหัสนักเรียน/เลขประจำตัว (ห้ามซ้ำใน Exam เดียวกัน)
+  studentName      String          // ชื่อ-นามสกุล
+  seatNumber       String?         // เลขที่นั่งสอบ
+  
+  startedAt        DateTime        @default(now())
+  expiresAt        DateTime        // เวลาเดดไลน์ของ Session นี้ (คำนวณจาก Server ป้องกันการแก้เวลาเครื่อง)
+  submittedAt      DateTime?       // เวลาที่ส่งข้อสอบจริง
+  
+  status           SessionStatus   @default(IN_PROGRESS)
+  violationCount   Int             @default(0) // ตัวนับการทำผิดกฎ
+  
+  autoGradedScore  Float           @default(0.0) // คะแนนจากข้อที่ตรวจอัตโนมัติ
+  manualGradedScore Float          @default(0.0) // คะแนนจากข้ออัตนัยที่ครูตรวจ
+  totalScore       Float           @default(0.0) // autoGradedScore + manualGradedScore
+  
+  ipAddress        String?
+  userAgent        String?
+
+  exam             Exam            @relation(fields: [examId], references: [id], onDelete: Cascade)
+  classroom        Classroom       @relation(fields: [classroomId], references: [id])
+  answers          StudentAnswer[]
+  violationLogs    ViolationLog[]
+
+  @@unique([examId, studentIdCard]) // ห้ามเลขประจำตัวเดิมสอบซ้ำในชุดข้อสอบเดียวกัน
+  @@index([examId, classroomId])
+  @@index([status])
+}
+
+/// ตารางคำตอบของนักเรียนรายข้อ
+model StudentAnswer {
+  id               String         @id @default(uuid())
+  sessionId        String
+  questionId       String
+  
+  // คำตอบที่นักเรียนตอบ
+  // Multiple Choice: "c1"
+  // Fill in blank: "mitochondria"
+  // Matching: { "l1": "r2", "l2": "r1" }
+  // Essay: "ข้อความอัตนัยบรรยาย..."
+  responsePayload  Json?
+  
+  isAutoGraded     Boolean        @default(false)
+  isReviewed       Boolean        @default(false) // ผ่านการตรวจโดยครูแล้วหรือยัง (สำหรับ Essay)
+  scoreAwarded     Float          @default(0.0)
+  teacherFeedback  String?        // ความคิดเห็นของครูสำหรับข้อเขียน
+  
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  session          StudentSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  question         Question       @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, questionId])
+  @@index([questionId])
+}
+
+/// ตารางบันทึกพฤติกรรมน่าสงสัย (Anti-Cheat Audit Trail)
+model ViolationLog {
+  id          String        @id @default(uuid())
+  sessionId   String
+  type        ViolationType
+  description String?       // รายละเอียดเพิ่มเติม เช่น สลับไปโปรแกรมอื่น 4 วินาที
+  occurredAt  DateTime      @default(now())
+
+  session     StudentSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+  @@index([type])
+}
+
+/// ตารางผลวิเคราะห์คุณภาพข้อสอบรายข้อ (Item Analysis)
+model ItemAnalytic {
+  id                   String   @id @default(uuid())
+  examId               String
+  questionId           String   @unique
+  
+  totalAttempts        Int      @default(0) // จำนวนนักเรียนที่ทำข้อนี้
+  correctCount         Int      @default(0) // จำนวนที่ตอบถูก
+  
+  // ค่าสถิติการวัดผลการศึกษา
+  difficultyIndex      Float    // ค่าความยากง่าย (p): 0.00 - 1.00
+  discriminationIndex  Float    // ค่าอำนาจจำแนก (r): -1.00 - +1.00
+  
+  // รายละเอียดการเลือกตัวเลือกเพื่อวิเคราะห์ตัวลวง (Distractor Analysis)
+  // Format: { "c1": { count: 12, percentage: 24.0, isCorrect: true }, "c2": { ... } }
+  distractorBreakdown  Json?
+  
+  updatedAt            DateTime @default(now()) @updatedAt
+
+  exam                 Exam     @relation(fields: [examId], references: [id], onDelete: Cascade)
+  question             Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@index([examId])
+}
