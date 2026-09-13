@@ -57,7 +57,7 @@ export default function HomePage() {
   };
 
   return (
-    <div className="relative h-screen w-screen overflow-hidden flex flex-col justify-between bg-[#030712] text-slate-100 p-3 sm:p-5 select-none font-sans">
+    <div className="relative min-h-screen lg:h-screen w-full overflow-x-hidden overflow-y-auto lg:overflow-hidden flex flex-col justify-between bg-[#030712] text-slate-100 p-3 sm:p-5 select-none font-sans">
       {/* Background Ambient Lighting & Glow Effects */}
       <div className="absolute -top-32 left-1/2 -translate-x-1/2 w-[500px] h-[350px] bg-emerald-500/15 rounded-full blur-[120px] pointer-events-none" />
       <div className="absolute top-1/3 -left-20 w-80 h-80 bg-blue-600/10 rounded-full blur-[100px] pointer-events-none" />
@@ -97,8 +97,8 @@ export default function HomePage() {
         </Link>
       </header>
 
-      {/* 2. Main Hero Content (Strictly Single-Screen Height Fit) */}
-      <main className="relative z-10 max-w-3xl w-full mx-auto flex flex-col items-center justify-center text-center my-auto space-y-3 sm:space-y-3.5">
+      {/* 2. Main Hero Content (Auto-Responsive Height Fit) */}
+      <main className="relative z-10 max-w-3xl w-full mx-auto flex flex-col items-center justify-center text-center my-3 lg:my-auto space-y-3 sm:space-y-3.5">
         {/* Large Transparent Circular Logo with Ambient Glow */}
         <div className="relative group">
           <div className="absolute inset-0 bg-emerald-500/20 rounded-full blur-xl group-hover:bg-emerald-500/30 transition-all duration-500" />
@@ -144,7 +144,7 @@ export default function HomePage() {
             <span className="text-emerald-400 font-mono text-[10px]">ตัวอย่าง: EXAM-SOC-01</span>
           </div>
 
-          <form onSubmit={handleJoinByCode} className="flex gap-2 relative">
+          <form onSubmit={handleJoinByCode} className="flex flex-col sm:flex-row gap-2 relative">
             <div className="relative flex-1">
               <input
                 type="text"
@@ -152,7 +152,7 @@ export default function HomePage() {
                 placeholder="กรอกรหัสชุดข้อสอบ เช่น EXAM-SOC-01"
                 value={examCode}
                 onChange={(e) => setExamCode(e.target.value)}
-                className="w-full px-3.5 py-2 pr-8 bg-slate-950/70 border border-slate-700/80 focus:border-emerald-500 rounded-xl text-white outline-none text-xs sm:text-sm font-mono uppercase tracking-wider transition focus:ring-1 focus:ring-emerald-500/40 shadow-inner"
+                className="w-full px-3.5 py-2.5 sm:py-2 pr-8 bg-slate-950/70 border border-slate-700/80 focus:border-emerald-500 rounded-xl text-white outline-none text-xs sm:text-sm font-mono uppercase tracking-wider transition focus:ring-1 focus:ring-emerald-500/40 shadow-inner"
               />
               {examCode && (
                 <button
@@ -166,7 +166,7 @@ export default function HomePage() {
             </div>
             <button
               type="submit"
-              className="px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold rounded-xl transition shadow-lg shadow-emerald-900/30 text-xs sm:text-sm whitespace-nowrap active:scale-95 flex items-center gap-1"
+              className="w-full sm:w-auto px-4 py-2.5 sm:py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold rounded-xl transition shadow-lg shadow-emerald-900/30 text-xs sm:text-sm whitespace-nowrap active:scale-95 flex items-center justify-center gap-1.5"
             >
               <span>เข้าห้องสอบ</span>
               <span>🚀</span>
@@ -280,7 +280,7 @@ export default function HomePage() {
           }}
           className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200"
         >
-          <div className="max-w-md w-full bg-slate-900/95 border border-slate-700/80 rounded-3xl p-6 shadow-2xl space-y-4 text-left backdrop-blur-2xl">
+          <div className="max-w-md w-full bg-slate-900/95 border border-slate-700/80 rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-2xl space-y-3.5 sm:space-y-4 text-left backdrop-blur-2xl max-h-[90vh] overflow-y-auto">
             {/* Modal Header */}
             <div className="flex items-start justify-between border-b border-slate-800 pb-3">
               <div className="flex items-center space-x-3">
@@ -365,7 +365,7 @@ export default function HomePage() {
 
       {/* 5. Modern Floating Toast Notification */}
       {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-[100] animate-in slide-in-from-bottom-4 fade-in duration-300">
+        <div className="fixed bottom-4 sm:bottom-6 left-4 right-4 sm:left-auto sm:right-6 z-[100] animate-in slide-in-from-bottom-4 fade-in duration-300 max-w-md ml-auto">
           <div className="px-4 py-3 bg-slate-900/95 border border-emerald-500/50 text-white rounded-2xl shadow-2xl backdrop-blur-xl flex items-center gap-3">
             <span className="text-xl">✨</span>
             <div className="text-xs">

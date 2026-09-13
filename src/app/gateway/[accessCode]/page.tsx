@@ -23,9 +23,9 @@ export default function GatewayPage({
     subjectName: 'รายวิชาทั่วไป',
     durationMinutes: 60,
     classrooms: [
-      { id: 'c1', gradeLevel: 'ม.1', roomNumber: '1' },
-      { id: 'c2', gradeLevel: 'ม.1', roomNumber: '2' },
-      { id: 'c3', gradeLevel: 'ม.1', roomNumber: '3' },
+      { id: 'c1', gradeLevel: 'ม.1', roomNumber: '' },
+      { id: 'c2', gradeLevel: 'ม.2', roomNumber: '' },
+      { id: 'c3', gradeLevel: 'ม.3', roomNumber: '' },
     ],
   };
 
@@ -33,7 +33,7 @@ export default function GatewayPage({
 
   const handleStartExam = async (studentData: {
     studentName: string;
-    studentIdCard: string;
+    studentIdCard?: string;
     seatNumber: string;
     classroomId: string;
   }) => {
@@ -51,11 +51,19 @@ export default function GatewayPage({
 
       // 1. บังคับให้สอบได้เพียงคนละ 1 ครั้งเท่านั้น
       if (typeof window !== 'undefined') {
-        const submittedKey = `submitted_${accessCode.toUpperCase()}_${studentData.studentIdCard.trim()}`;
+        const hasCard = studentData.studentIdCard && studentData.studentIdCard.trim() !== '-' && studentData.studentIdCard.trim() !== '';
+        const studentIdentifier = hasCard
+          ? studentData.studentIdCard!.trim()
+          : `${studentData.classroomId}_${studentData.seatNumber ? `no${studentData.seatNumber.trim()}` : studentData.studentName.trim()}`;
+
+        const submittedKey = `submitted_${accessCode.toUpperCase()}_${studentIdentifier}`;
         if (localStorage.getItem(submittedKey)) {
+          const displayLabel = hasCard
+            ? `เลขประจำตัว "${studentData.studentIdCard}"`
+            : `นักเรียน "${studentData.studentName}"`;
           return {
             success: false,
-            errorMessage: `⚠️ ไม่อนุญาตให้สอบซ้ำ: เลขประจำตัว "${studentData.studentIdCard}" ได้ทำการส่งข้อสอบชุดนี้เรียบร้อยแล้ว (จำกัดสิทธิ์การสอบคนละ 1 ครั้งเท่านั้น หากมีเหตุขัดข้องกรุณาติดต่อคุณครูผู้สอน)`,
+            errorMessage: `⚠️ ไม่อนุญาตให้สอบซ้ำ: ${displayLabel} ได้ทำการส่งข้อสอบชุดนี้เรียบร้อยแล้ว (จำกัดสิทธิ์การสอบคนละ 1 ครั้งเท่านั้น หากมีเหตุขัดข้องกรุณาติดต่อคุณครูผู้สอน)`,
           };
         }
       }
@@ -78,7 +86,10 @@ export default function GatewayPage({
       }
 
       // 3. สร้าง Session ID เฉพาะสำหรับการสอบครั้งนี้
-      const demoSessionId = `sess_${Date.now()}_${studentData.studentIdCard}`;
+      const studentTag = (studentData.studentIdCard && studentData.studentIdCard.trim() !== '-')
+        ? studentData.studentIdCard.trim()
+        : (studentData.seatNumber?.trim() || 'std');
+      const demoSessionId = `sess_${Date.now()}_${studentTag}`;
       
       const sessionPayload = {
         sessionId: demoSessionId,
@@ -106,9 +117,16 @@ export default function GatewayPage({
 
   return (
     <div className="min-h-screen bg-slate-950 flex flex-col justify-between p-4">
-      {/* Top Info Bar (ตัดปุ่มกลับหน้าหลักออก เพื่อให้นักเรียนโฟกัสเฉพาะการสอบ) */}
-      <div className="max-w-lg w-full mx-auto pt-4 flex items-center justify-end text-xs text-slate-400">
-        <span className="font-mono bg-slate-900 px-3 py-1 rounded-xl border border-slate-800 text-emerald-400 font-semibold">
+      {/* Top Info Bar พร้อมปุ่มย้อนกลับหน้าหลัก */}
+      <div className="max-w-lg w-full mx-auto pt-4 flex items-center justify-between text-xs text-slate-400">
+        <Link
+          href="/"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-emerald-400 border border-slate-800 hover:border-emerald-500/40 transition duration-200 shadow-sm group font-medium"
+        >
+          <span className="text-base leading-none transition-transform group-hover:-translate-x-0.5">‹</span>
+          <span>ย้อนกลับหน้าหลัก</span>
+        </Link>
+        <span className="font-mono bg-slate-900 px-3 py-1.5 rounded-xl border border-slate-800 text-emerald-400 font-semibold">
           รหัสข้อสอบ: {accessCode.toUpperCase()}
         </span>
       </div>

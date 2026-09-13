@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { ExamRoom } from '@/components/ExamRoom';
 import { QuestionDefinition, StudentAnswerPayload } from '@/types/exam';
 import { gradeStudentSubmission } from '@/services/gradingEngine';
@@ -62,9 +63,11 @@ export default function StudentExamPage({
 
   const handleSubmit = async (answers: StudentAnswerPayload[], isForced: boolean) => {
     const accessCode = sessionData?.accessCode || 'EXAM-SOC-01';
-    const studentCard = sessionData?.studentData?.studentIdCard || '0000';
+    const rawStudentCard = sessionData?.studentData?.studentIdCard?.trim();
+    const hasCard = rawStudentCard && rawStudentCard !== '-';
+    const studentCard = hasCard ? rawStudentCard : '-';
     const studentName = sessionData?.studentData?.studentName || 'ผู้เข้าสอบ';
-    const classroom = sessionData?.studentData?.classroomId || 'ม.1/1';
+    const classroom = (sessionData?.studentData?.classroomId || 'ม.1').replace(/\/.*$/, '');
     const seatNumber = sessionData?.studentData?.seatNumber || '-';
 
     // 1. คำนวณคะแนนผ่าน Grading Engine ตามกฎ:
@@ -80,7 +83,10 @@ export default function StudentExamPage({
 
     if (typeof window !== 'undefined') {
       // 2. บันทึกสิทธิ์การสอบ: ล็อกให้สอบได้เพียงคนละ 1 ครั้งเท่านั้น
-      const submittedKey = `submitted_${accessCode.toUpperCase()}_${studentCard.trim()}`;
+      const studentIdentifier = hasCard
+        ? studentCard
+        : `${classroom}_${seatNumber !== '-' ? `no${seatNumber}` : studentName.trim()}`;
+      const submittedKey = `submitted_${accessCode.toUpperCase()}_${studentIdentifier}`;
       localStorage.setItem(submittedKey, new Date().toISOString());
 
       // 3. บันทึกผลคะแนนลงฐานข้อมูลกลางฝั่ง Client เพื่อให้ครูดูในหน้าแอดมิน
@@ -90,7 +96,7 @@ export default function StudentExamPage({
         const newRecord = {
           id: `rec_${Date.now()}`,
           accessCode: accessCode.toUpperCase(),
-          studentId: studentCard,
+          studentId: hasCard ? studentCard : (seatNumber !== '-' ? `เลขที่ ${seatNumber}` : '-'),
           studentName,
           classroom,
           seatNumber,
@@ -102,7 +108,7 @@ export default function StudentExamPage({
           totalScore: summary.totalScore,
         };
         // อัปเดตหรือเพิ่มผลสอบ
-        const filtered = results.filter((r: any) => !(r.accessCode === accessCode.toUpperCase() && r.studentId === studentCard));
+        const filtered = results.filter((r: any) => !(r.accessCode === accessCode.toUpperCase() && ((hasCard && r.studentId === studentCard) || (!hasCard && r.studentName === studentName && r.classroom === classroom))));
         filtered.push(newRecord);
         localStorage.setItem('krusos_student_results', JSON.stringify(filtered));
       } catch (e) {
@@ -123,15 +129,18 @@ export default function StudentExamPage({
 
   if (isSubmitted) {
     return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4 sm:p-6 text-center select-none font-sans">
-        <div className="max-w-md w-full bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-4">
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center p-3 sm:p-6 text-center select-none font-sans">
+        <div className="max-w-md w-full bg-slate-900 border border-slate-800 rounded-2xl sm:rounded-3xl p-5 sm:p-8 shadow-2xl space-y-4 my-auto">
           <div className="w-14 h-14 bg-emerald-500/20 text-emerald-400 rounded-full flex items-center justify-center mx-auto text-2xl font-bold">
             ✓
           </div>
           <div>
             <h2 className="text-xl sm:text-2xl font-black text-white">ส่งข้อสอบเรียบร้อยแล้ว</h2>
             <p className="text-slate-400 text-xs mt-1">
-              ผู้สอบ: <strong className="text-slate-200">{sessionData?.studentData?.studentName || 'นักเรียน'}</strong> ({sessionData?.studentData?.studentIdCard || '-'}) ห้อง {sessionData?.studentData?.classroomId || 'ม.1/1'}
+              ผู้สอบ: <strong className="text-slate-200">{sessionData?.studentData?.studentName || 'นักเรียน'}</strong>
+              {sessionData?.studentData?.seatNumber ? ` (เลขที่ ${sessionData.studentData.seatNumber})` : ''}
+              {sessionData?.studentData?.studentIdCard && sessionData.studentData.studentIdCard !== '-' ? ` [รหัส: ${sessionData.studentData.studentIdCard}]` : ''}
+              {' '}ชั้น {(sessionData?.studentData?.classroomId || 'ม.1').replace(/\/.*$/, '')}
             </p>
           </div>
 
@@ -194,6 +203,13 @@ export default function StudentExamPage({
 
           {/* ปุ่มเสร็จสิ้นและออกจากระบบ */}
           <div className="space-y-2 pt-1">
+            <Link
+              href="/"
+              className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-2xl transition text-xs sm:text-sm shadow-lg shadow-emerald-900/30 flex items-center justify-center gap-2 active:scale-95"
+            >
+              <span>🏠 กลับสู่หน้าหลักระบบสอบ</span>
+            </Link>
+
             <button
               onClick={() => {
                 if (typeof window !== 'undefined') {
@@ -201,13 +217,13 @@ export default function StudentExamPage({
                 }
                 setShowExitModal(true);
               }}
-              className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-2xl transition text-xs sm:text-sm shadow-lg shadow-emerald-900/30 flex items-center justify-center gap-1.5 active:scale-95"
+              className="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white font-medium rounded-xl transition text-xs border border-slate-700/80 flex items-center justify-center gap-1.5"
             >
-              <span>เสร็จสิ้นและออกจากระบบ (ปิดหน้านี้)</span>
+              <span>ปิดหน้าต่างนี้</span>
               <span>🚪</span>
             </button>
             <p className="text-[11px] text-slate-500 text-center font-normal">
-              * ข้อมูลคะแนนถูกบันทึกเรียบร้อย สามารถปิดแท็บหรือเบราว์เซอร์นี้ได้เลยครับ
+              * ข้อมูลคะแนนถูกบันทึกเรียบร้อย สามารถกลับหน้าหลักหรือปิดแท็บได้เลยครับ
             </p>
           </div>
         </div>
@@ -248,8 +264,8 @@ export default function StudentExamPage({
       examTitle={sessionData?.examTitle || 'แบบทดสอบวัดผลการเรียนรู้'}
       subjectName={sessionData?.subjectName || 'สังคมศึกษา ศาสนา และวัฒนธรรม 1 (ส21101)'}
       studentName={sessionData?.studentData?.studentName || 'นักเรียน'}
-      studentIdCard={sessionData?.studentData?.studentIdCard || '54321'}
-      classroomLabel={sessionData?.studentData?.classroomId || 'ม.1/1'}
+      studentIdCard={sessionData?.studentData?.studentIdCard || ''}
+      classroomLabel={(sessionData?.studentData?.classroomId || 'ม.1').replace(/\/.*$/, '')}
       sessionId={sessionId}
       expiresAt={sessionData?.expiresAt || new Date(Date.now() + 60 * 60 * 1000).toISOString()}
       maxViolations={sessionData?.maxViolations || 3}

@@ -45,9 +45,7 @@ export const INITIAL_EXAMS: ExamRecord[] = [
     shuffleQuestions: true,
     shuffleChoices: true,
     classrooms: [
-      { id: 'c1', gradeLevel: 'ม.1', roomNumber: '1' },
-      { id: 'c2', gradeLevel: 'ม.1', roomNumber: '2' },
-      { id: 'c3', gradeLevel: 'ม.1', roomNumber: '3' },
+      { id: 'c1', gradeLevel: 'ม.1', roomNumber: '' },
     ],
     maxViolations: 3,
     totalStudents: 45,
@@ -130,8 +128,7 @@ export const INITIAL_EXAMS: ExamRecord[] = [
     shuffleQuestions: true,
     shuffleChoices: true,
     classrooms: [
-      { id: 'c1', gradeLevel: 'ม.1', roomNumber: '1' },
-      { id: 'c2', gradeLevel: 'ม.1', roomNumber: '2' },
+      { id: 'c1', gradeLevel: 'ม.1', roomNumber: '' },
     ],
     maxViolations: 3,
     totalStudents: 40,
@@ -176,8 +173,9 @@ export const INITIAL_EXAMS: ExamRecord[] = [
     shuffleQuestions: true,
     shuffleChoices: true,
     classrooms: [
-      { id: 'c1', gradeLevel: 'ม.1', roomNumber: '1' },
-      { id: 'c2', gradeLevel: 'ม.1', roomNumber: '2' },
+      { id: 'c1', gradeLevel: 'ม.1', roomNumber: '' },
+      { id: 'c2', gradeLevel: 'ม.2', roomNumber: '' },
+      { id: 'c3', gradeLevel: 'ม.3', roomNumber: '' },
     ],
     maxViolations: 2,
     totalStudents: 38,

@@ -220,7 +220,7 @@ export default function AdminDashboardPage() {
       accessCode: 'EXAM-SOC-01',
       studentId: '54321',
       studentName: 'ด.ช. กิตติศักดิ์ มั่งมี',
-      classroom: 'ม.1/1',
+      classroom: 'ม.1',
       seatNumber: '1',
       objectiveScore: 8.0,
       objectiveMax: 8.0,
@@ -233,7 +233,7 @@ export default function AdminDashboardPage() {
       accessCode: 'EXAM-SOC-01',
       studentId: '54322',
       studentName: 'ด.ญ. ชนิกานต์ สว่างใจ',
-      classroom: 'ม.1/1',
+      classroom: 'ม.1',
       seatNumber: '2',
       objectiveScore: 7.0,
       objectiveMax: 8.0,
@@ -246,7 +246,7 @@ export default function AdminDashboardPage() {
       accessCode: 'EXAM-SOC-01',
       studentId: '54325',
       studentName: 'ด.ญ. ภัทรวดี มงคลศิลป์',
-      classroom: 'ม.1/1',
+      classroom: 'ม.1',
       seatNumber: '5',
       objectiveScore: 6.5,
       objectiveMax: 8.0,
@@ -259,7 +259,7 @@ export default function AdminDashboardPage() {
       accessCode: 'EXAM-SOC-01',
       studentId: '54324',
       studentName: 'ด.ช. ธนพล เจริญยิ่ง',
-      classroom: 'ม.1/1',
+      classroom: 'ม.1',
       seatNumber: '4',
       objectiveScore: 6.0,
       objectiveMax: 8.0,
@@ -272,7 +272,7 @@ export default function AdminDashboardPage() {
       accessCode: 'EXAM-SOC-01',
       studentId: '54323',
       studentName: 'ด.ช. นรินทร์ สมบูรณ์',
-      classroom: 'ม.1/1',
+      classroom: 'ม.1',
       seatNumber: '3',
       objectiveScore: 5.0,
       objectiveMax: 8.0,
@@ -285,7 +285,7 @@ export default function AdminDashboardPage() {
       accessCode: 'EXAM-HIS-01',
       studentId: '54321',
       studentName: 'ด.ช. กิตติศักดิ์ มั่งมี',
-      classroom: 'ม.1/1',
+      classroom: 'ม.1',
       seatNumber: '1',
       objectiveScore: 2.0,
       objectiveMax: 2.0,
@@ -335,7 +335,7 @@ export default function AdminDashboardPage() {
     const filename = `ผลคะแนน_${selectedScoreExamCode}_โรงเรียนวัดบางปูน.csv`;
     
     // Header พร้อม UTF-8 BOM (\uFEFF)
-    let csvContent = '\uFEFFอันดับ,เลขที่,เลขประจำตัว,ชื่อ - นามสกุล,ห้องเรียน,คะแนนปรนัย/จับคู่,คะแนนเต็ม,การประเมินเสริม (อัตนัย),จำนวนครั้งหลุดจอ,เวลาที่ส่ง\n';
+    let csvContent = '\uFEFFอันดับ,เลขที่,เลขประจำตัว,ชื่อ - นามสกุล,ระดับชั้น,คะแนนปรนัย/จับคู่,คะแนนเต็ม,การประเมินเสริม (อัตนัย),จำนวนครั้งหลุดจอ,เวลาที่ส่ง\n';
     
     const sorted = [...filteredScores].sort((a, b) => b.objectiveScore - a.objectiveScore);
     sorted.forEach((item, index) => {
@@ -416,9 +416,7 @@ export default function AdminDashboardPage() {
       shuffleQuestions: true,
       shuffleChoices: true,
       classrooms: [
-        { id: 'c1', gradeLevel: 'ม.1', roomNumber: '1' },
-        { id: 'c2', gradeLevel: 'ม.1', roomNumber: '2' },
-        { id: 'c3', gradeLevel: 'ม.1', roomNumber: '3' },
+        { id: 'c1', gradeLevel: 'ม.1', roomNumber: '' },
       ],
       maxViolations: Number(newExam.maxViolations) || 3,
       totalStudents: 0,
@@ -1115,7 +1113,7 @@ export default function AdminDashboardPage() {
                           {rank2.studentName}
                         </p>
                         <span className="text-[10px] text-slate-400 block font-mono">
-                          ห้อง {rank2.classroom}
+                          ชั้น {rank2.classroom}
                         </span>
                         <span className="inline-block px-2 py-0.5 rounded-full bg-slate-700/80 text-slate-200 font-bold font-mono text-xs">
                           {rank2.objectiveScore} คะแนน
@@ -1141,7 +1139,7 @@ export default function AdminDashboardPage() {
                           {rank1.studentName}
                         </p>
                         <span className="text-[10px] text-slate-400 block font-mono">
-                          ห้อง {rank1.classroom}
+                          ชั้น {rank1.classroom}
                         </span>
                         <span className="inline-block px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 font-black font-mono text-xs shadow-sm">
                           {rank1.objectiveScore} คะแนน
@@ -1165,7 +1163,7 @@ export default function AdminDashboardPage() {
                           {rank3.studentName}
                         </p>
                         <span className="text-[10px] text-slate-400 block font-mono">
-                          ห้อง {rank3.classroom}
+                          ชั้น {rank3.classroom}
                         </span>
                         <span className="inline-block px-2 py-0.5 rounded-full bg-amber-950/80 text-amber-400 font-bold font-mono text-xs">
                           {rank3.objectiveScore} คะแนน
@@ -1198,7 +1196,7 @@ export default function AdminDashboardPage() {
                       <th className="py-3 px-3">เลขที่</th>
                       <th className="py-3 px-3">เลขประจำตัว</th>
                       <th className="py-3 px-3">ชื่อ - นามสกุล</th>
-                      <th className="py-3 px-3">ห้อง</th>
+                      <th className="py-3 px-3">ระดับชั้น</th>
                       <th className="py-3 px-3">คะแนนปรนัย/จับคู่/ถูกผิด</th>
                       <th className="py-3 px-3">คะแนนเสริม (อัตนัย)</th>
                       <th className="py-3 px-3">เวลาที่ส่ง</th>
@@ -1299,7 +1297,7 @@ export default function AdminDashboardPage() {
               <div className="flex items-center justify-between border-b border-slate-800 pb-3">
                 <div>
                   <span className="text-sm font-bold text-white">ด.ช. กิตติศักดิ์ มั่งมี</span>
-                  <span className="text-xs text-slate-400 ml-2">เลขประจำตัว: 54321 • ห้อง ม.1/1</span>
+                  <span className="text-xs text-slate-400 ml-2">เลขที่ 1 • ชั้น ม.1</span>
                 </div>
                 <span className="text-xs px-2.5 py-1 rounded-full font-bold bg-amber-500/20 text-amber-400">
                   ⏳ รอการตรวจ
@@ -1493,40 +1491,42 @@ export default function AdminDashboardPage() {
             {/* CTT Table */}
             <div>
               <h4 className="text-xs font-bold mb-2">ตารางวิเคราะห์คุณภาพข้อสอบ (Classical Test Theory - 27% Kelley's Rule):</h4>
-              <table className="w-full text-left text-[11px] border border-slate-300">
-                <thead className="bg-slate-100 border-b border-slate-300">
-                  <tr>
-                    <th className="p-2 border-r border-slate-300">ข้อที่</th>
-                    <th className="p-2 border-r border-slate-300">ประเภทข้อสอบ</th>
-                    <th className="p-2 border-r border-slate-300">ความยาก (p)</th>
-                    <th className="p-2 border-r border-slate-300">อำนาจจำแนก (r)</th>
-                    <th className="p-2">ผลการประเมินคุณภาพ</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-200">
-                  <tr>
-                    <td className="p-2 border-r border-slate-200 font-bold">1</td>
-                    <td className="p-2 border-r border-slate-200">ปรนัย (MCQ)</td>
-                    <td className="p-2 border-r border-slate-200">0.55</td>
-                    <td className="p-2 border-r border-slate-200">+0.60</td>
-                    <td className="p-2 font-semibold text-emerald-700">ยากง่ายพอเหมาะ • จำแนกได้ดีมาก (เก็บเข้าคลัง)</td>
-                  </tr>
-                  <tr>
-                    <td className="p-2 border-r border-slate-200 font-bold">2</td>
-                    <td className="p-2 border-r border-slate-200">ถูก/ผิด (True/False)</td>
-                    <td className="p-2 border-r border-slate-200">0.72</td>
-                    <td className="p-2 border-r border-slate-200">+0.42</td>
-                    <td className="p-2 font-semibold text-blue-700">ค่อนข้างง่าย • จำแนกได้ดี (ใช้ได้)</td>
-                  </tr>
-                  <tr>
-                    <td className="p-2 border-r border-slate-200 font-bold">4</td>
-                    <td className="p-2 border-r border-slate-200">จับคู่ (Matching)</td>
-                    <td className="p-2 border-r border-slate-200">0.50</td>
-                    <td className="p-2 border-r border-slate-200">+0.50</td>
-                    <td className="p-2 font-semibold text-emerald-700">ยากง่ายพอเหมาะ • จำแนกได้ดีมาก (เก็บเข้าคลัง)</td>
-                  </tr>
-                </tbody>
-              </table>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-[11px] border border-slate-300">
+                  <thead className="bg-slate-100 border-b border-slate-300">
+                    <tr>
+                      <th className="p-2 border-r border-slate-300">ข้อที่</th>
+                      <th className="p-2 border-r border-slate-300">ประเภทข้อสอบ</th>
+                      <th className="p-2 border-r border-slate-300">ความยาก (p)</th>
+                      <th className="p-2 border-r border-slate-300">อำนาจจำแนก (r)</th>
+                      <th className="p-2">ผลการประเมินคุณภาพ</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-200">
+                    <tr>
+                      <td className="p-2 border-r border-slate-200 font-bold">1</td>
+                      <td className="p-2 border-r border-slate-200">ปรนัย (MCQ)</td>
+                      <td className="p-2 border-r border-slate-200">0.55</td>
+                      <td className="p-2 border-r border-slate-200">+0.60</td>
+                      <td className="p-2 font-semibold text-emerald-700">ยากง่ายพอเหมาะ • จำแนกได้ดีมาก (เก็บเข้าคลัง)</td>
+                    </tr>
+                    <tr>
+                      <td className="p-2 border-r border-slate-200 font-bold">2</td>
+                      <td className="p-2 border-r border-slate-200">ถูก/ผิด (True/False)</td>
+                      <td className="p-2 border-r border-slate-200">0.72</td>
+                      <td className="p-2 border-r border-slate-200">+0.42</td>
+                      <td className="p-2 font-semibold text-blue-700">ค่อนข้างง่าย • จำแนกได้ดี (ใช้ได้)</td>
+                    </tr>
+                    <tr>
+                      <td className="p-2 border-r border-slate-200 font-bold">4</td>
+                      <td className="p-2 border-r border-slate-200">จับคู่ (Matching)</td>
+                      <td className="p-2 border-r border-slate-200">0.50</td>
+                      <td className="p-2 border-r border-slate-200">+0.50</td>
+                      <td className="p-2 font-semibold text-emerald-700">ยากง่ายพอเหมาะ • จำแนกได้ดีมาก (เก็บเข้าคลัง)</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
             </div>
 
             {/* Signature Area */}

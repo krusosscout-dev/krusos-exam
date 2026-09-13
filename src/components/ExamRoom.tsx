@@ -6,7 +6,7 @@ interface ExamRoomProps {
   examTitle: string;
   subjectName: string;
   studentName: string;
-  studentIdCard: string;
+  studentIdCard?: string;
   classroomLabel: string;
   sessionId: string;
   expiresAt: string;
@@ -107,42 +107,46 @@ export const ExamRoom: React.FC<ExamRoomProps> = ({
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100 flex flex-col select-none">
       {/* 1. Header Bar: Info, Countdown & Violation Badge */}
-      <header className="bg-slate-800 border-b border-slate-700 px-6 py-3 flex items-center justify-between sticky top-0 z-30 shadow-md">
-        <div className="flex items-center space-x-3">
-          <img
-            src="/logo.png"
-            alt="โลโก้ระบบสอบออนไลน์"
-            className="w-10 h-10 object-contain drop-shadow-md hidden sm:block"
-          />
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-base sm:text-lg font-bold text-white tracking-wide">{examTitle}</h1>
-              <span className="text-[10px] text-emerald-400 bg-emerald-950/80 border border-emerald-700 px-2 py-0.5 rounded-full hidden md:inline-flex items-center gap-1 font-medium">
-                💾 บันทึกคำตอบร่างอัตโนมัติ
+      <header className="bg-slate-800 border-b border-slate-700 px-3 sm:px-6 py-2.5 sm:py-3 sticky top-0 z-30 shadow-md">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-start md:items-center justify-between gap-2.5 md:gap-4">
+          <div className="flex items-center space-x-2.5 sm:space-x-3 w-full md:w-auto">
+            <img
+              src="/logo.png"
+              alt="โลโก้ระบบสอบออนไลน์"
+              className="w-8 h-8 sm:w-10 sm:h-10 object-contain drop-shadow-md shrink-0"
+            />
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                <h1 className="text-sm sm:text-base md:text-lg font-bold text-white tracking-wide truncate max-w-[200px] sm:max-w-md">
+                  {examTitle}
+                </h1>
+                <span className="text-[10px] text-emerald-400 bg-emerald-950/80 border border-emerald-700 px-1.5 py-0.5 rounded-full hidden sm:inline-flex items-center gap-1 font-medium">
+                  💾 บันทึกคำตอบร่างอัตโนมัติ
+                </span>
+              </div>
+              <p className="text-[11px] sm:text-xs text-slate-400 truncate">
+                วิชา: <span className="text-emerald-400 font-medium">{subjectName}</span> | นร: {studentName}{studentIdCard && studentIdCard.trim() && studentIdCard !== '-' ? ` (${studentIdCard})` : ''} ชั้น {classroomLabel.replace(/\/.*$/, '')}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between sm:justify-end w-full md:w-auto gap-2 sm:gap-4 shrink-0 border-t border-slate-700/60 md:border-t-0 pt-2 md:pt-0">
+            {/* Violation Indicator */}
+            <div className="flex items-center space-x-1.5 sm:space-x-2 bg-slate-900/80 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg border border-red-500/30">
+              <span className="text-[11px] sm:text-xs text-red-400 font-semibold">การทำผิดกฎ:</span>
+              <span className={`text-xs sm:text-sm font-bold ${violations > 0 ? 'text-red-500' : 'text-slate-300'}`}>
+                {violations} / {maxViolations} ครั้ง
               </span>
             </div>
-            <p className="text-xs text-slate-400">
-              วิชา: <span className="text-emerald-400 font-medium">{subjectName}</span> | นร: {studentName} ({studentIdCard}) ห้อง {classroomLabel}
-            </p>
-          </div>
-        </div>
 
-        <div className="flex items-center space-x-6">
-          {/* Violation Indicator */}
-          <div className="flex items-center space-x-2 bg-slate-900/80 px-3 py-1.5 rounded-lg border border-red-500/30">
-            <span className="text-xs text-red-400 font-semibold">การทำผิดกฎ:</span>
-            <span className={`text-sm font-bold ${violations > 0 ? 'text-red-500' : 'text-slate-300'}`}>
-              {violations} / {maxViolations} ครั้ง
-            </span>
-          </div>
-
-          {/* Server Countdown Timer */}
-          <div className={`px-4 py-1.5 rounded-lg font-mono text-base font-bold shadow-inner ${
-            remainingSeconds < 300
-              ? 'bg-red-950/80 text-red-400 border border-red-600 animate-pulse'
-              : 'bg-emerald-950/60 text-emerald-300 border border-emerald-600'
-          }`}>
-            ⏳ เหลือเวลา: {formatTimer(remainingSeconds)}
+            {/* Server Countdown Timer */}
+            <div className={`px-2.5 sm:px-4 py-1 sm:py-1.5 rounded-lg font-mono text-xs sm:text-base font-bold shadow-inner ${
+              remainingSeconds < 300
+                ? 'bg-red-950/80 text-red-400 border border-red-600 animate-pulse'
+                : 'bg-emerald-950/60 text-emerald-300 border border-emerald-600'
+            }`}>
+              ⏳ เหลือเวลา: {formatTimer(remainingSeconds)}
+            </div>
           </div>
         </div>
       </header>
@@ -201,23 +205,23 @@ export const ExamRoom: React.FC<ExamRoomProps> = ({
       )}
 
       {/* 4. Main Body: Question Area & Navigation Grid */}
-      <main className="flex-1 max-w-7xl w-full mx-auto p-6 grid grid-cols-1 lg:grid-cols-4 gap-6">
+      <main className="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-6 grid grid-cols-1 lg:grid-cols-4 gap-4 sm:gap-6">
         {/* Left/Main Column: Question Card */}
-        <section className="lg:col-span-3 bg-slate-800/80 border border-slate-700 rounded-2xl p-8 flex flex-col justify-between shadow-xl">
+        <section className="lg:col-span-3 bg-slate-800/80 border border-slate-700 rounded-2xl p-4 sm:p-8 flex flex-col justify-between shadow-xl">
           {activeQuestion && (
-            <div className="space-y-6">
+            <div className="space-y-4 sm:space-y-6">
               {/* Question Header */}
-              <div className="flex items-center justify-between border-b border-slate-700 pb-4">
-                <span className="bg-emerald-500/20 text-emerald-400 font-bold px-3 py-1 rounded-lg text-sm">
+              <div className="flex items-center justify-between border-b border-slate-700 pb-3 sm:pb-4">
+                <span className="bg-emerald-500/20 text-emerald-400 font-bold px-2.5 sm:px-3 py-1 rounded-lg text-xs sm:text-sm">
                   ข้อที่ {currentQuestionIndex + 1} จาก {questions.length}
                 </span>
-                <span className="text-slate-400 text-sm">
+                <span className="text-slate-400 text-xs sm:text-sm">
                   คะแนนเต็ม: <strong className="text-white">{activeQuestion.points}</strong> คะแนน
                 </span>
               </div>
 
               {/* Question Prompt */}
-              <div className="text-lg text-slate-100 font-medium leading-relaxed">
+              <div className="text-base sm:text-lg text-slate-100 font-medium leading-relaxed">
                 {activeQuestion.promptText}
               </div>
 
@@ -315,8 +319,8 @@ export const ExamRoom: React.FC<ExamRoomProps> = ({
                     {activeQuestion.optionsPayload.left.map((itemLeft: any) => {
                       const currentMatch = answers[activeQuestion.id]?.[itemLeft.id] || '';
                       return (
-                        <div key={itemLeft.id} className="flex items-center justify-between gap-4 bg-slate-900/60 p-3 rounded-xl border border-slate-700">
-                          <span className="text-slate-200 font-medium text-sm w-1/2">{itemLeft.text}</span>
+                        <div key={itemLeft.id} className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 sm:gap-4 bg-slate-900/60 p-3 sm:p-3.5 rounded-xl border border-slate-700">
+                          <span className="text-slate-200 font-medium text-sm sm:w-1/2">{itemLeft.text}</span>
                           <select
                             value={currentMatch}
                             onChange={(e) => {
@@ -326,7 +330,7 @@ export const ExamRoom: React.FC<ExamRoomProps> = ({
                                 [itemLeft.id]: e.target.value,
                               });
                             }}
-                            className="bg-slate-800 border border-slate-600 rounded-lg p-2 text-sm text-white w-1/2 outline-none focus:border-emerald-500"
+                            className="bg-slate-800 border border-slate-600 rounded-lg p-2.5 sm:p-2 text-sm text-white w-full sm:w-1/2 outline-none focus:border-emerald-500"
                           >
                             <option value="">-- เลือกคู่ที่ถูกต้อง --</option>
                             {activeQuestion.optionsPayload.right.map((itemRight: any) => (
@@ -345,11 +349,11 @@ export const ExamRoom: React.FC<ExamRoomProps> = ({
           )}
 
           {/* Navigation Controls */}
-          <div className="flex items-center justify-between border-t border-slate-700 pt-6 mt-8">
+          <div className="flex items-center justify-between border-t border-slate-700 pt-4 sm:pt-6 mt-6 sm:mt-8 gap-2">
             <button
               disabled={currentQuestionIndex === 0}
               onClick={() => setCurrentQuestionIndex((prev) => prev - 1)}
-              className="px-5 py-2.5 rounded-xl border border-slate-600 text-slate-300 hover:bg-slate-700 transition disabled:opacity-30 disabled:cursor-not-allowed"
+              className="px-3.5 sm:px-5 py-2 sm:py-2.5 rounded-xl border border-slate-600 text-slate-300 hover:bg-slate-700 transition disabled:opacity-30 disabled:cursor-not-allowed text-xs sm:text-sm active:scale-95"
             >
               ← ข้อก่อนหน้า
             </button>
@@ -357,14 +361,14 @@ export const ExamRoom: React.FC<ExamRoomProps> = ({
             {isLastQuestion ? (
               <button
                 onClick={() => setShowConfirmSubmit(true)}
-                className="px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold transition shadow-lg shadow-emerald-700/40"
+                className="px-4 sm:px-6 py-2 sm:py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold transition shadow-lg shadow-emerald-700/40 text-xs sm:text-sm whitespace-nowrap active:scale-95"
               >
                 ตรวจทานและส่งข้อสอบ ✨
               </button>
             ) : (
               <button
                 onClick={() => setCurrentQuestionIndex((prev) => prev + 1)}
-                className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold transition"
+                className="px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold transition text-xs sm:text-sm active:scale-95"
               >
                 ข้อถัดไป →
               </button>
@@ -373,7 +377,7 @@ export const ExamRoom: React.FC<ExamRoomProps> = ({
         </section>
 
         {/* Right Column: Question Navigator Palette */}
-        <aside className="bg-slate-800/80 border border-slate-700 rounded-2xl p-6 shadow-xl flex flex-col justify-between">
+        <aside className="bg-slate-800/80 border border-slate-700 rounded-2xl p-4 sm:p-6 shadow-xl flex flex-col justify-between">
           <div>
             <h2 className="text-base font-bold text-white mb-2">ผังข้อสอบ</h2>
             <p className="text-xs text-slate-400 mb-4">
