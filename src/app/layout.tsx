@@ -1,9 +1,17 @@
 import type { Metadata } from 'next';
+import { Prompt } from 'next/font/google';
 import './globals.css';
 
+const promptFont = Prompt({
+  weight: ['300', '400', '500', '600', '700'],
+  subsets: ['latin', 'thai'],
+  display: 'swap',
+  variable: '--font-prompt',
+});
+
 export const metadata: Metadata = {
-  title: 'ระบบจัดสอบออนไลน์และการวิเคราะห์ผลเชิงลึก | EdTech Assessment',
-  description: 'Centralized Multi-Subject Online Exam & Assessment Platform with Real-time Anti-Cheat and Item Analysis',
+  title: 'Krusos Smart Assessment | ระบบจัดสอบออนไลน์และวิเคราะห์ผลเชิงลึก โรงเรียนวัดบางปูน',
+  description: 'แพลตฟอร์มสอบออนไลน์มาตรฐาน พร้อมระบบป้องกันการทุจริตแบบเรียลไทม์ และการวิเคราะห์คุณภาพข้อสอบรายข้อ (Item Analysis CTT)',
 };
 
 export default function RootLayout({
@@ -12,8 +20,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="th">
-      <body className="antialiased min-h-screen bg-slate-950 text-slate-100">
+    <html lang="th" className={promptFont.variable}>
+      <body className="font-sans antialiased bg-slate-950 text-slate-100 selection:bg-emerald-500 selection:text-white">
         {children}
       </body>
     </html>
