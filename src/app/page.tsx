@@ -51,13 +51,13 @@ export default function HomePage() {
           <span>🎯</span> Centralized Multi-Subject Assessment Platform
         </div>
 
-        {/* Title without awkward breaks */}
-        <div className="space-y-1 max-w-3xl">
-          <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-[42px] font-bold text-white tracking-normal leading-tight">
-            ระบบจัดสอบออนไลน์และการวิเคราะห์ผลเชิงลึก
+        {/* Title */}
+        <div className="space-y-1">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-white tracking-normal">
+            ระบบสอบออนไลน์
           </h1>
-          <p className="text-slate-400 text-xs sm:text-sm font-normal max-w-xl mx-auto pt-1 leading-relaxed">
-            วัดผลมาตรฐาน • ตรวจอัตโนมัติ • ป้องกันทุจริตแบบเรียลไทม์ • วิเคราะห์คุณภาพข้อสอบ (p, r)
+          <p className="text-slate-400 text-xs sm:text-sm font-normal max-w-lg mx-auto pt-1 leading-relaxed">
+            ระบบวัดผลและวิเคราะห์ข้อสอบเชิงลึก • โรงเรียนวัดบางปูน
           </p>
         </div>
 

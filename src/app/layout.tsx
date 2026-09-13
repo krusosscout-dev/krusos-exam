@@ -11,7 +11,7 @@ const kanit = Kanit({
 });
 
 export const metadata: Metadata = {
-  title: 'Krusos Smart Assessment | ระบบจัดสอบออนไลน์ โรงเรียนวัดบางปูน',
+  title: 'ระบบสอบออนไลน์ | โรงเรียนวัดบางปูน (Krusos Smart Assessment)',
   description: 'แพลตฟอร์มสอบออนไลน์มาตรฐาน พร้อมระบบตรวจจับการทุจริตและการวิเคราะห์ข้อสอบรายข้อ',
 };
 
