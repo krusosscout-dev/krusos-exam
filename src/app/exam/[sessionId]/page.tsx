@@ -144,13 +144,13 @@ export default function StudentExamPage({
             </p>
           </div>
 
-          {/* กล่องแสดงคะแนนตามเงื่อนไข: บอกคะแนนเฉพาะ ปรนัย จับคู่ ถูกผิด และส่วนเสริมบอกแค่ ผ่าน/ไม่ผ่าน */}
-          <div className="bg-slate-800/80 p-4 rounded-2xl border border-slate-700 text-left space-y-3">
-            {/* ส่วนที่ 1: คะแนนปรนัย / จับคู่ / ถูกผิด */}
+          {/* กล่องแสดงคะแนน: คะแนนข้อสอบปรนัยตรวจทันที + ข้อสอบอัตนัยรอครูตรวจให้คะแนน (ไม่มีคำว่าผ่าน/ไม่ผ่าน) */}
+          <div className="bg-slate-800/80 p-4 rounded-2xl border border-slate-700 text-left space-y-3.5">
+            {/* ส่วนที่ 1: คะแนนปรนัย / จับคู่ / ถูกผิด / เติมคำ */}
             <div className="border-b border-slate-700/80 pb-3">
               <div className="flex items-center justify-between">
                 <span className="text-xs text-slate-300 font-semibold">
-                  คะแนนข้อสอบปรนัย / จับคู่ / ถูกผิด
+                  คะแนนข้อสอบปรนัย / จับคู่ / ถูกผิด / เติมคำ
                 </span>
                 <span className="text-xs text-emerald-400 font-mono font-bold bg-emerald-500/10 px-2 py-0.5 rounded">
                   ตรวจทันที
@@ -166,32 +166,23 @@ export default function StudentExamPage({
               </div>
             </div>
 
-            {/* ส่วนที่ 2: คะแนนเสริม (อัตนัย/การประเมินอื่น) บอกแค่ ผ่าน หรือ ไม่ผ่าน */}
+            {/* ส่วนที่ 2: ข้อสอบอัตนัย (ข้อเขียน) - รอคุณครูตรวจให้คะแนน */}
             <div>
               <div className="flex items-center justify-between">
-                <span className="text-xs text-slate-300 font-semibold">
-                  การประเมินคะแนนเสริม (อัตนัย/เขียนตอบ)
+                <span className="text-xs text-slate-300 font-semibold flex items-center gap-1.5">
+                  <span>✍️</span> ข้อสอบอัตนัย (ข้อเขียน)
                 </span>
-                <span className="text-[10px] text-slate-400">
-                  เกณฑ์ผ่าน/ไม่ผ่าน
+                <span className="text-[11px] text-amber-400/90 font-mono font-medium">
+                  {gradingSummary?.essayMaxPoints ? `คะแนนเต็ม ${gradingSummary.essayMaxPoints} คะแนน` : 'รอตรวจให้คะแนน'}
                 </span>
               </div>
-              <div className="mt-2">
-                {gradingSummary?.supplementaryStatus === 'PASS' && (
-                  <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 rounded-xl text-xs font-bold">
-                    <span>✓</span> ผ่านเกณฑ์ประเมินเสริม
-                  </div>
-                )}
-                {gradingSummary?.supplementaryStatus === 'FAIL' && (
-                  <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-red-500/20 text-red-300 border border-red-500/40 rounded-xl text-xs font-bold">
-                    <span>✕</span> ต้องปรับปรุง (ไม่ผ่าน)
-                  </div>
-                )}
-                {gradingSummary?.supplementaryStatus === 'PENDING' && (
-                  <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-500/20 text-amber-300 border border-amber-500/40 rounded-xl text-xs font-bold">
-                    <span>⏳</span> อยู่ระหว่างรอคุณครูตรวจข้อเขียน
-                  </div>
-                )}
+              <div className="mt-2 space-y-1.5">
+                <div className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/15 text-amber-300 border border-amber-500/30 rounded-xl text-xs font-semibold">
+                  <span className="animate-pulse">⏳</span> อยู่ระหว่างรอคุณครูตรวจให้คะแนน
+                </div>
+                <p className="text-[11px] text-slate-400 leading-relaxed">
+                  * ข้อเขียนส่วนนี้คุณครูผู้สอนจะเป็นผู้ตรวจคำตอบและบันทึกคะแนนในระบบภายหลังครับ
+                </p>
               </div>
             </div>
           </div>
