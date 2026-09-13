@@ -14,7 +14,17 @@ export default function HomePage() {
   const router = useRouter();
 
   useEffect(() => {
-    setExams(getAllExams());
+    const loaded = getAllExams();
+    if (typeof window !== 'undefined') {
+      const active = loaded.filter((exam) => {
+        const isClosed = localStorage.getItem(`exam_closed_${exam.accessCode.toUpperCase()}`) === 'true';
+        if (isClosed) return false;
+        return exam.isOpen !== false;
+      });
+      setExams(active);
+    } else {
+      setExams(loaded);
+    }
   }, []);
 
   const handleJoinByCode = (e: React.FormEvent) => {
@@ -68,7 +78,7 @@ export default function HomePage() {
         </div>
 
         {/* Modern Title & Teacher Branding */}
-        <div className="space-y-1.5 max-w-2xl px-2">
+        <div className="space-y-2 max-w-2xl px-2">
           {/* Eyebrow Badge */}
           <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 backdrop-blur-sm shadow-sm">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
@@ -82,15 +92,14 @@ export default function HomePage() {
             ระบบวัดและประเมินผลการเรียนรู้อัจฉริยะ
           </h1>
 
-          {/* Department & Teacher Metadata */}
-          <div className="flex flex-wrap items-center justify-center gap-1.5 sm:gap-2 text-[11px] sm:text-xs text-slate-300 pt-0.5">
-            <span className="px-2.5 py-0.5 rounded-lg bg-slate-900/90 border border-slate-800 text-slate-300 font-medium">
+          {/* Department & Teacher Metadata (คนละบรรทัด สวยงาม สมบูรณ์แบบ) */}
+          <div className="flex flex-col items-center justify-center gap-1.5 pt-0.5">
+            <div className="inline-flex items-center px-3.5 py-1 rounded-full bg-slate-900/90 border border-slate-800 text-[11px] sm:text-xs text-slate-300 font-medium shadow-sm backdrop-blur-md">
               กลุ่มสาระการเรียนรู้สังคมศึกษา ศาสนาและวัฒนธรรม
-            </span>
-            <span className="hidden sm:inline text-slate-600">•</span>
-            <span className="px-2.5 py-0.5 rounded-lg bg-emerald-950/40 border border-emerald-500/30 text-emerald-300 font-medium flex items-center gap-1">
+            </div>
+            <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-emerald-950/50 border border-emerald-500/30 text-[11px] sm:text-xs text-emerald-300 font-medium shadow-sm backdrop-blur-md">
               <span>👨‍🏫</span> ครูผู้สอน นายนรากรณ์ จูงาม (ครูซอสสอนสังคม)
-            </span>
+            </div>
           </div>
         </div>
 
@@ -103,15 +112,26 @@ export default function HomePage() {
             <span className="text-emerald-400 font-mono text-[10px]">ตัวอย่าง: EXAM-SOC-01</span>
           </div>
 
-          <form onSubmit={handleJoinByCode} className="flex gap-2">
-            <input
-              type="text"
-              required
-              placeholder="กรอกรหัสชุดข้อสอบ เช่น EXAM-SOC-01"
-              value={examCode}
-              onChange={(e) => setExamCode(e.target.value)}
-              className="flex-1 px-3.5 py-2 bg-slate-950/70 border border-slate-700/80 focus:border-emerald-500 rounded-xl text-white outline-none text-xs sm:text-sm font-mono uppercase tracking-wider transition focus:ring-1 focus:ring-emerald-500/40 shadow-inner"
-            />
+          <form onSubmit={handleJoinByCode} className="flex gap-2 relative">
+            <div className="relative flex-1">
+              <input
+                type="text"
+                required
+                placeholder="กรอกรหัสชุดข้อสอบ เช่น EXAM-SOC-01"
+                value={examCode}
+                onChange={(e) => setExamCode(e.target.value)}
+                className="w-full px-3.5 py-2 pr-8 bg-slate-950/70 border border-slate-700/80 focus:border-emerald-500 rounded-xl text-white outline-none text-xs sm:text-sm font-mono uppercase tracking-wider transition focus:ring-1 focus:ring-emerald-500/40 shadow-inner"
+              />
+              {examCode && (
+                <button
+                  type="button"
+                  onClick={() => setExamCode('')}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 text-xs"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
             <button
               type="submit"
               className="px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold rounded-xl transition shadow-lg shadow-emerald-900/30 text-xs sm:text-sm whitespace-nowrap active:scale-95 flex items-center gap-1"
@@ -126,43 +146,63 @@ export default function HomePage() {
         <div className="w-full max-w-2xl pt-0.5 space-y-2">
           <div className="flex items-center justify-between text-[11px] px-1">
             <span className="font-bold text-slate-300 flex items-center gap-1.5">
-              <span className="text-emerald-400 text-xs">🟢</span> วิชาที่กำลังเปิดสอบ (คลิกดูรายละเอียด)
+              <span className={`text-xs ${exams.length > 0 ? 'text-emerald-400 animate-pulse' : 'text-slate-500'}`}>
+                {exams.length > 0 ? '🟢' : '⚪'}
+              </span>
+              <span>วิชาที่กำลังเปิดสอบ {exams.length > 0 ? `(${exams.length} วิชา)` : ''}</span>
             </span>
-            <span className="text-slate-500 text-[10px]">แตะที่วิชาเพื่อดูคำชี้แจง</span>
+            <span className="text-slate-500 text-[10px]">
+              {exams.length > 0 ? 'แตะที่วิชาเพื่อดูคำชี้แจงและเริ่มสอบ' : 'สถานะห้องสอบ'}
+            </span>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-2.5">
-            {exams.map((exam) => (
-              <button
-                key={exam.id}
-                onClick={() => {
-                  setSelectedExam(exam);
-                  setCopiedSuccess(false);
-                }}
-                className="bg-slate-900/80 hover:bg-slate-800/90 backdrop-blur-md border border-slate-800/90 hover:border-emerald-500/50 p-2.5 sm:p-3 rounded-2xl text-left transition shadow-md flex items-center space-x-3 group hover:-translate-y-0.5 duration-200"
-              >
-                <div className="w-10 h-10 rounded-xl bg-slate-800/90 group-hover:bg-emerald-500/20 border border-slate-700/50 group-hover:border-emerald-500/30 flex items-center justify-center text-xl shrink-0 transition">
-                  {exam.emoji || '📝'}
-                </div>
-                <div className="overflow-hidden flex-1 min-w-0">
-                  <div className="flex items-center justify-between gap-1">
-                    <span className="text-[10px] text-emerald-400 font-mono font-bold">
-                      {exam.subjectCode}
-                    </span>
-                    <span className="text-[9px] text-slate-400 bg-slate-800 px-1.5 py-0.5 rounded">
-                      {exam.durationMinutes}น.
-                    </span>
+          {exams.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-2.5">
+              {exams.map((exam) => (
+                <button
+                  key={exam.id}
+                  onClick={() => {
+                    setSelectedExam(exam);
+                    setCopiedSuccess(false);
+                  }}
+                  className="bg-slate-900/80 hover:bg-slate-800/90 backdrop-blur-md border border-slate-800/90 hover:border-emerald-500/60 p-2.5 sm:p-3 rounded-2xl text-left transition shadow-md flex items-center space-x-3 group hover:-translate-y-0.5 duration-200"
+                >
+                  <div className="w-10 h-10 rounded-xl bg-slate-800/90 group-hover:bg-emerald-500/20 border border-slate-700/50 group-hover:border-emerald-500/30 flex items-center justify-center text-xl shrink-0 transition">
+                    {exam.emoji || '📝'}
                   </div>
-                  <h3 className="text-xs font-bold text-white truncate group-hover:text-emerald-300 transition">
-                    {exam.subjectName}
-                  </h3>
-                  <span className="text-[10px] text-slate-400 block -mt-0.5 group-hover:text-slate-300">
-                    ดูรายละเอียด →
-                  </span>
-                </div>
-              </button>
-            ))}
-          </div>
+                  <div className="overflow-hidden flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-1">
+                      <span className="text-[10px] text-emerald-400 font-mono font-bold">
+                        {exam.subjectCode}
+                      </span>
+                      <span className="text-[9px] text-slate-400 bg-slate-800/80 px-1.5 py-0.5 rounded border border-slate-700/50">
+                        {exam.durationMinutes}น.
+                      </span>
+                    </div>
+                    <h3 className="text-xs font-bold text-white truncate group-hover:text-emerald-300 transition">
+                      {exam.subjectName}
+                    </h3>
+                    <div className="flex items-center justify-between text-[10px] text-slate-400 -mt-0.5 group-hover:text-emerald-400 transition">
+                      <span>{exam.questions.length} ข้อ</span>
+                      <span>เข้าสอบ →</span>
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div className="p-4 bg-slate-900/70 border border-slate-800/90 rounded-2xl text-center space-y-1.5 backdrop-blur-md">
+              <div className="w-10 h-10 rounded-xl bg-slate-800/80 border border-slate-700/60 text-slate-400 flex items-center justify-center text-lg mx-auto shadow-inner">
+                🔒
+              </div>
+              <div className="text-xs text-slate-200 font-bold">
+                ขณะนี้ยังไม่มีวิชาที่เปิดรับคำตอบทั่วไป
+              </div>
+              <p className="text-[11px] text-slate-400 max-w-sm mx-auto leading-relaxed">
+                หากคุณครูได้แจกรหัสข้อสอบประจำห้องเรียน กรุณากรอกรหัสในช่อง <strong className="text-emerald-400">"ระบุรหัสเข้าสอบ"</strong> ด้านบนเพื่อเริ่มทำข้อสอบได้ทันทีครับ
+              </p>
+            </div>
+          )}
         </div>
       </main>
 
@@ -173,7 +213,12 @@ export default function HomePage() {
 
       {/* 4. Exam Detail Modal (ป๊อปอัปดูรายละเอียดวิชาสอบแบบโมเดิร์น) */}
       {selectedExam && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200">
+        <div 
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setSelectedExam(null);
+          }}
+          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200"
+        >
           <div className="max-w-md w-full bg-slate-900/95 border border-slate-700/80 rounded-3xl p-6 shadow-2xl space-y-4 text-left backdrop-blur-2xl">
             {/* Modal Header */}
             <div className="flex items-start justify-between border-b border-slate-800 pb-3">
