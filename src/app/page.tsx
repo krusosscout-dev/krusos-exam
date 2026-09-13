@@ -214,7 +214,7 @@ export default function HomePage() {
           {exams.length > 0 ? (
             <div
               ref={scrollRef}
-              className={`flex gap-2 sm:gap-2.5 overflow-x-auto pb-1 scroll-smooth ${
+              className={`flex gap-2 sm:gap-2.5 overflow-x-auto pt-1.5 pb-1.5 px-1 scroll-smooth ${
                 exams.length <= 3 ? 'justify-center flex-wrap' : 'justify-start'
               }`}
               style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
@@ -226,7 +226,7 @@ export default function HomePage() {
                     setSelectedExam(exam);
                     setCopiedSuccess(false);
                   }}
-                  className="w-full sm:w-[205px] flex-shrink-0 bg-slate-900/80 hover:bg-slate-800/90 backdrop-blur-md border border-slate-800/90 hover:border-emerald-500/60 p-2.5 sm:p-3 rounded-2xl text-left transition shadow-md flex items-center space-x-3 group hover:-translate-y-0.5 duration-200"
+                  className="w-full sm:w-[205px] flex-shrink-0 bg-slate-900/80 hover:bg-slate-800/95 backdrop-blur-md border border-slate-800 hover:border-emerald-400 p-2.5 sm:p-3 rounded-2xl text-left transition-all duration-200 shadow-md hover:shadow-lg hover:shadow-emerald-950/40 flex items-center space-x-3 group relative"
                 >
                   <div className="w-10 h-10 rounded-xl bg-slate-800/90 group-hover:bg-emerald-500/20 border border-slate-700/50 group-hover:border-emerald-500/30 flex items-center justify-center text-xl shrink-0 transition">
                     {exam.emoji || '📝'}
