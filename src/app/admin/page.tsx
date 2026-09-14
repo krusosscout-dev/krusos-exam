@@ -7,6 +7,49 @@ import { INITIAL_EXAMS, getAllExams, saveExamsToStorage, ExamRecord } from '@/se
 import { QuestionDefinition, QuestionType } from '@/types/exam';
 
 // ฟังก์ชันอัจฉริยะแปลงข้อความโจทย์ข้อสอบจำนวนมาก (Smart Bulk Question Parser)
+// ฟังก์ชันแยกแยะเฉลยจากข้อความทุกรูปแบบ (AI, ตาราง, Pipe |, 1. ค 2. ก, หรือ 1 ค | 2 ก)
+function parseAnswerKeyString(text: string): Record<number, { id: string; letter: string }> {
+  if (!text || !text.trim()) return {};
+  const map: Record<string, string> = {
+    'ก': 'c1', 'a': 'c1', '1': 'c1',
+    'ข': 'c2', 'b': 'c2', '2': 'c2',
+    'ค': 'c3', 'c': 'c3', '3': 'c3',
+    'ง': 'c4', 'd': 'c4', '4': 'c4'
+  };
+
+  const letterMap: Record<string, string> = {
+    'c1': 'ก',
+    'c2': 'ข',
+    'c3': 'ค',
+    'c4': 'ง',
+  };
+
+  const keys: Record<number, { id: string; letter: string }> = {};
+
+  // Regex ตรวจจับรูปแบบข้อและเฉลย:
+  // - 1 ค | 2 ก | 3 ง
+  // - 1. ค | 2. ก
+  // - 1) ค 2) ก
+  // - ข้อ 1 ค | ข้อ 2 ก
+  // - | 1 | ค | 2 | ก |
+  // - 1: ค, 2: ก, 3-ง
+  const regex = /(?:\||\b)(?:ข้อ\s*|ข้อที่\s*)?(\d+)[\.\)\s:-]*\|?\s*([กขคงabcdABCD1-4])(?:\s*\||\s*\,|\s*\n|\s+|$)/g;
+  const matches = [...text.matchAll(regex)];
+
+  for (const m of matches) {
+    const qNum = parseInt(m[1], 10);
+    const letter = m[2].toLowerCase();
+    if (map[letter]) {
+      keys[qNum] = {
+        id: map[letter],
+        letter: letterMap[map[letter]] || letter
+      };
+    }
+  }
+
+  return keys;
+}
+
 function parseBulkExamText(
   text: string,
   defaultScores: Record<string, number>,
@@ -16,29 +59,32 @@ function parseBulkExamText(
 
   const clean = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').trim();
 
-  // 1. ตรวจสอบว่ามีส่วน "เฉลยรวมท้ายข้อสอบ" หรือไม่ เช่น "เฉลย: 1. ค 2. ข 3. ก"
+  // 1. ตรวจสอบว่ามีส่วน "เฉลยรวมท้ายข้อสอบ" หรือไม่ (ทั้งแบบมีคำนำหน้า "เฉลย:" หรือบล็อกตาราง "1 ค | 2 ก | 3 ง" จาก AI)
   const globalAnswerKeys: Record<number, string> = {};
-  const answerSectionMatch = clean.match(/(?:เฉลยรวม|เฉลยคำตอบ|เฉลยแบบทดสอบ|เฉลยข้อสอบ|เฉลย)[\s:]*([\s\S]*)$/i);
   let mainText = clean;
-  if (answerSectionMatch && answerSectionMatch.index !== undefined && answerSectionMatch.index > 30) {
-    const ansText = answerSectionMatch[1];
-    const ansMatches = [...ansText.matchAll(/(?:ข้อ\s*)?(\d+)[\.\)\s:-]+([กขคงabcdABCD1-4])/g)];
-    for (const m of ansMatches) {
-      const qNum = parseInt(m[1], 10);
-      const letter = m[2].toLowerCase();
-      const map: Record<string, string> = {
-        'ก': 'c1', 'a': 'c1', '1': 'c1',
-        'ข': 'c2', 'b': 'c2', '2': 'c2',
-        'ค': 'c3', 'c': 'c3', '3': 'c3',
-        'ง': 'c4', 'd': 'c4', '4': 'c4'
-      };
-      if (map[letter]) {
-        globalAnswerKeys[qNum] = map[letter];
-      }
+
+  const headerMatch = clean.match(/(?:เฉลยรวม|เฉลยคำตอบ|เฉลยแบบทดสอบ|เฉลยข้อสอบ|เฉลย|กุญแจเฉลย|answers?[\s_]*keys?|key|solutions?)[\s:]*([\s\S]*)$/i);
+  const gridMatch = clean.match(/(?:^|\n+)((?:(?:\d+)[\.\)\s:-]*\|?\s*[กขคงabcdABCD1-4](?:[\s\|\,\/\t]+|$))+)$/i);
+
+  let ansBlockText = '';
+  let cutIndex = -1;
+
+  if (headerMatch && headerMatch.index !== undefined && headerMatch.index > 20) {
+    ansBlockText = headerMatch[1];
+    cutIndex = headerMatch.index;
+  } else if (gridMatch && gridMatch.index !== undefined && gridMatch.index > 20) {
+    ansBlockText = gridMatch[1];
+    cutIndex = gridMatch.index;
+  }
+
+  if (ansBlockText) {
+    const parsed = parseAnswerKeyString(ansBlockText);
+    for (const [qNumStr, item] of Object.entries(parsed)) {
+      globalAnswerKeys[Number(qNumStr)] = item.id;
     }
     // ตัดส่วนเฉลยท้ายข้อสอบออก เพื่อไม่ให้กลายเป็นข้อสอบอีกข้อ
-    if (ansMatches.length > 0) {
-      mainText = clean.substring(0, answerSectionMatch.index).trim();
+    if (Object.keys(globalAnswerKeys).length > 0 && cutIndex > 0) {
+      mainText = clean.substring(0, cutIndex).trim();
     }
   }
 
@@ -358,9 +404,15 @@ export default function AdminDashboardPage() {
     }));
   };
 
-  // Add Question Modal State (พร้อมรองรับรูปภาพประกอบโจทย์)
+  // Pending Answer Changes: เมื่อแอดมินติ๊กเลือกเฉลยบนการ์ด แล้วต้องกดปุ่ม "💾 บันทึกเฉลย" เพื่อยืนยัน
+  const [pendingAnswerChanges, setPendingAnswerChanges] = useState<
+    Record<string, { answerKey: any; choiceLabel: string }>
+  >({});
+
+  // Add Question Modal State (พร้อมรองรับรูปภาพประกอบโจทย์ และแก้ไขข้อสอบเดิม)
   const [showAddQuestionModal, setShowAddQuestionModal] = useState<boolean>(false);
   const [targetExamForAdd, setTargetExamForAdd] = useState<string>('EXAM-SOC-01');
+  const [editingQuestionId, setEditingQuestionId] = useState<string | null>(null);
   const [newQuestion, setNewQuestion] = useState({
     type: 'MULTIPLE_CHOICE' as QuestionType,
     promptText: '',
@@ -377,6 +429,7 @@ export default function AdminDashboardPage() {
   });
 
   const resetQuestionForm = (preselectedType: QuestionType = 'MULTIPLE_CHOICE') => {
+    setEditingQuestionId(null);
     setNewQuestion({
       type: preselectedType,
       promptText: '',
@@ -393,12 +446,53 @@ export default function AdminDashboardPage() {
     });
   };
 
+  const openEditQuestionModal = (examAccessCode: string, question: QuestionDefinition) => {
+    setTargetExamForAdd(examAccessCode);
+    setEditingQuestionId(question.id);
+
+    let choice1 = '';
+    let choice2 = '';
+    let choice3 = '';
+    let choice4 = '';
+    let correctChoice = 'c1';
+
+    if (question.type === 'MULTIPLE_CHOICE' && Array.isArray(question.optionsPayload)) {
+      choice1 = question.optionsPayload[0]?.text || '';
+      choice2 = question.optionsPayload[1]?.text || '';
+      choice3 = question.optionsPayload[2]?.text || '';
+      choice4 = question.optionsPayload[3]?.text || '';
+      correctChoice = String(question.answerKey || 'c1');
+    }
+
+    setNewQuestion({
+      type: question.type,
+      promptText: question.promptText || '',
+      mediaUrl: question.mediaUrl || '',
+      points: question.points || 1.0,
+      choice1,
+      choice2,
+      choice3,
+      choice4,
+      correctChoice,
+      tfAnswer: String(question.answerKey ?? 'true'),
+      blankAnswer: Array.isArray(question.answerKey) ? question.answerKey.join(', ') : String(question.answerKey || ''),
+      essayRubric: String(question.answerKey || ''),
+    });
+
+    setShowAddQuestionModal(true);
+  };
+
   // Bulk / Batch Question Import Modal State (เพิ่มข้อสอบทีละหลายข้อเพื่อประหยัดเวลา)
   const [showBulkAddModal, setShowBulkAddModal] = useState<boolean>(false);
   const [bulkExamTargetCode, setBulkExamTargetCode] = useState<string>('EXAM-SOC-01');
   const [bulkActiveTab, setBulkActiveTab] = useState<'smart_paste' | 'quick_form'>('smart_paste');
   const [bulkRawText, setBulkRawText] = useState<string>('');
   const [bulkParsedQuestions, setBulkParsedQuestions] = useState<QuestionDefinition[]>([]);
+
+  // Quick Answer Key Modal State (วางเฉลยด่วนจาก AI เช่น 1 ค | 2 ก | 3 ง หรือ 1. ค 2. ก)
+  const [showQuickAnswerModal, setShowQuickAnswerModal] = useState<boolean>(false);
+  const [quickAnswerTargetCode, setQuickAnswerTargetCode] = useState<string>('EXAM-SOC-01');
+  const [quickAnswerRawText, setQuickAnswerRawText] = useState<string>('');
   const [quickRows, setQuickRows] = useState<Array<{
     promptText: string;
     type: QuestionType;
@@ -716,6 +810,40 @@ export default function AdminDashboardPage() {
       answerKey = newQuestion.essayRubric.trim() || 'ตรวจโดยครูผู้สอน';
     }
 
+    if (editingQuestionId) {
+      const updatedExams = exams.map((ex) => {
+        if (ex.accessCode === targetCode) {
+          const updatedQuestions = ex.questions.map((q) => {
+            if (q.id === editingQuestionId) {
+              return {
+                ...q,
+                type: newQuestion.type,
+                promptText: newQuestion.promptText.trim(),
+                mediaUrl: newQuestion.mediaUrl?.trim() || null,
+                points: Number(newQuestion.points) || (typeScores[newQuestion.type] ?? 1.0),
+                optionsPayload,
+                answerKey,
+              };
+            }
+            return q;
+          });
+          return {
+            ...ex,
+            questions: updatedQuestions,
+          };
+        }
+        return ex;
+      });
+
+      setExams(updatedExams);
+      saveExamsToStorage(updatedExams);
+      setShowAddQuestionModal(false);
+      setEditingQuestionId(null);
+      resetQuestionForm();
+      showToast(`บันทึกการแก้ไขข้อสอบเรียบร้อยแล้ว ✓`, 'success');
+      return;
+    }
+
     const newQuestionDef: QuestionDefinition = {
       id: newQId,
       examId: targetExam.id,
@@ -809,6 +937,158 @@ export default function AdminDashboardPage() {
         showToast(`ลบข้อสอบข้อที่ ${qIndex + 1} เรียบร้อยแล้ว`, 'info');
       },
     });
+  };
+
+  // ติ๊กเลือกตัวเลือกเฉลยบนการ์ด (สเตจไว้ ยังไม่บันทึก จนกว่าจะกดปุ่มบันทึก)
+  const handleSelectQuestionAnswer = (
+    questionId: string,
+    currentSavedAnswer: any,
+    newAnswerKey: any,
+    choiceLabel: string
+  ) => {
+    // ถ้าคลิกเลือกกลับไปเป็นเฉลยเดิม ให้ล้างการเปลี่ยนแปลงค้างไว้
+    if (newAnswerKey === currentSavedAnswer) {
+      setPendingAnswerChanges((prev) => {
+        const next = { ...prev };
+        delete next[questionId];
+        return next;
+      });
+      return;
+    }
+
+    setPendingAnswerChanges((prev) => ({
+      ...prev,
+      [questionId]: { answerKey: newAnswerKey, choiceLabel },
+    }));
+  };
+
+  // ยกเลิกการติ๊กเปลี่ยนเฉลย
+  const handleCancelPendingAnswer = (questionId: string) => {
+    setPendingAnswerChanges((prev) => {
+      const next = { ...prev };
+      delete next[questionId];
+      return next;
+    });
+    showToast('ยกเลิกการเปลี่ยนแปลงเฉลยแล้ว', 'info');
+  };
+
+  // กดปุ่ม "💾 บันทึกเฉลยข้อนี้" เพื่อยืนยันการบันทึกเฉลยที่ติ๊กไว้
+  const handleSavePendingAnswer = (
+    examAccessCode: string,
+    questionId: string,
+    qIndex: number
+  ) => {
+    const pending = pendingAnswerChanges[questionId];
+    if (!pending) return;
+
+    const updatedExams = exams.map((ex) => {
+      if (ex.accessCode === examAccessCode) {
+        const updatedQuestions = ex.questions.map((q) => {
+          if (q.id === questionId) {
+            return { ...q, answerKey: pending.answerKey };
+          }
+          return q;
+        });
+        return { ...ex, questions: updatedQuestions };
+      }
+      return ex;
+    });
+
+    setExams(updatedExams);
+    saveExamsToStorage(updatedExams);
+
+    setPendingAnswerChanges((prev) => {
+      const next = { ...prev };
+      delete next[questionId];
+      return next;
+    });
+
+    showToast(
+      `บันทึกเฉลยข้อที่ ${qIndex + 1} เป็นตัวเลือก "${pending.choiceLabel}" เรียบร้อยแล้ว ✓`,
+      'success'
+    );
+  };
+
+  // ฟังก์ชันช่วยเหลือบันทึกเฉลยโดยตรง (กรณีใช้งานภายนอก)
+  const handleUpdateQuestionAnswer = (
+    examAccessCode: string,
+    questionId: string,
+    newAnswerKey: any,
+    choiceLabel?: string
+  ) => {
+    const updatedExams = exams.map((ex) => {
+      if (ex.accessCode === examAccessCode) {
+        const updatedQuestions = ex.questions.map((q) => {
+          if (q.id === questionId) {
+            return { ...q, answerKey: newAnswerKey };
+          }
+          return q;
+        });
+        return { ...ex, questions: updatedQuestions };
+      }
+      return ex;
+    });
+
+    setExams(updatedExams);
+    saveExamsToStorage(updatedExams);
+    showToast(
+      choiceLabel
+        ? `บันทึกเฉลยเป็น "${choiceLabel}" เรียบร้อยแล้ว ✓`
+        : 'อัปเดตเฉลยข้อสอบเรียบร้อยแล้ว ✓',
+      'success'
+    );
+  };
+
+  // เปิดหน้าต่าง "วางเฉลยด่วนจาก AI"
+  const openQuickAnswerModal = (accessCode: string) => {
+    setQuickAnswerTargetCode(accessCode);
+    setQuickAnswerRawText('');
+    setShowQuickAnswerModal(true);
+  };
+
+  // ยืนยันบันทึกเฉลยด่วนที่คัดลอกมาจาก AI ลงในชุดข้อสอบ
+  const handleApplyQuickAnswers = () => {
+    const parsed = parseAnswerKeyString(quickAnswerRawText);
+    const parsedCount = Object.keys(parsed).length;
+    if (parsedCount === 0) {
+      showToast('ไม่พบข้อมูลเฉลย กรุณาวางข้อความเฉลย เช่น 1 ค | 2 ก | 3 ง', 'error');
+      return;
+    }
+
+    const targetExam = exams.find((e) => e.accessCode === quickAnswerTargetCode);
+    if (!targetExam) {
+      showToast('ไม่พบชุดข้อสอบที่เลือก', 'error');
+      return;
+    }
+
+    let matchCount = 0;
+    const updatedQuestions = targetExam.questions.map((q, idx) => {
+      const qNum = q.questionNumber || (idx + 1);
+      if (parsed[qNum]) {
+        matchCount++;
+        return {
+          ...q,
+          answerKey: parsed[qNum].id,
+        };
+      }
+      return q;
+    });
+
+    const updatedExams = exams.map((ex) => {
+      if (ex.accessCode === quickAnswerTargetCode) {
+        return { ...ex, questions: updatedQuestions };
+      }
+      return ex;
+    });
+
+    setExams(updatedExams);
+    saveExamsToStorage(updatedExams);
+    setShowQuickAnswerModal(false);
+    setQuickAnswerRawText('');
+    showToast(
+      `อัปเดตเฉลยด่วนสำเร็จ ${matchCount} ข้อ สำหรับวิชา ${targetExam.subjectName} เรียบร้อยแล้ว! 🎯✓`,
+      'success'
+    );
   };
 
   const handleDeleteExam = (accessCode: string, title: string) => {
@@ -1313,6 +1593,13 @@ export default function AdminDashboardPage() {
                         >
                           <span>⚡</span> เพิ่มหลายข้อ
                         </button>
+                        <button
+                          onClick={() => openQuickAnswerModal(exam.accessCode)}
+                          className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-amber-300 hover:text-amber-200 text-xs font-bold rounded-xl transition border border-slate-700 hover:border-amber-500/50 flex items-center gap-1.5 active:scale-95 shadow-sm"
+                          title="คัดลอกข้อความเฉลยจาก AI เช่น 1 ค | 2 ก | 3 ง มาวางเพื่อบันทึกเฉลยทุกข้อในคลิกเดียว"
+                        >
+                          <span>🎯</span> วางเฉลยด่วน
+                        </button>
                       </div>
 
                       <button
@@ -1357,13 +1644,24 @@ export default function AdminDashboardPage() {
                                   </span>
                                 </div>
 
-                                <button
-                                  onClick={() => handleDeleteQuestion(exam.accessCode, q.id, idx)}
-                                  className="text-red-400 hover:text-red-200 hover:bg-red-950/80 px-2.5 py-1 rounded-lg transition border border-red-800/40 text-xs flex items-center gap-1 active:scale-95"
-                                  title="ลบข้อสอบข้อนี้"
-                                >
-                                  <span>🗑️</span> ลบ
-                                </button>
+                                <div className="flex items-center gap-1.5">
+                                  <button
+                                    type="button"
+                                    onClick={() => openEditQuestionModal(exam.accessCode, q)}
+                                    className="text-amber-400 hover:text-amber-200 hover:bg-amber-950/80 px-2.5 py-1 rounded-lg transition border border-amber-800/40 text-xs flex items-center gap-1 active:scale-95 font-medium"
+                                    title="แก้ไขข้อสอบข้อนี้ (โจทย์, รูปภาพ, ตัวเลือก, คะแนน)"
+                                  >
+                                    <span>✏️</span> แก้ไข
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeleteQuestion(exam.accessCode, q.id, idx)}
+                                    className="text-red-400 hover:text-red-200 hover:bg-red-950/80 px-2.5 py-1 rounded-lg transition border border-red-800/40 text-xs flex items-center gap-1 active:scale-95"
+                                    title="ลบข้อสอบข้อนี้"
+                                  >
+                                    <span>🗑️</span> ลบ
+                                  </button>
+                                </div>
                               </div>
 
                               {/* ข้อความโจทย์คำถาม */}
@@ -1380,44 +1678,309 @@ export default function AdminDashboardPage() {
                                 </div>
                               )}
 
-                              {/* แสดงตัวเลือก / เฉลย */}
-                              {q.type === 'MULTIPLE_CHOICE' && Array.isArray(q.optionsPayload) && (
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 pt-1">
-                                  {q.optionsPayload.map((opt: any) => {
-                                    const isCorrect =
-                                      q.answerKey === opt.id ||
-                                      (Array.isArray(q.answerKey) && q.answerKey.includes(opt.id));
-                                    return (
-                                      <div
-                                        key={opt.id}
-                                        className={`p-2 px-2.5 rounded-xl text-[11px] flex items-center justify-between transition ${
-                                          isCorrect
-                                            ? 'bg-emerald-950/80 text-emerald-300 border border-emerald-600/50 font-semibold shadow-sm'
-                                            : 'bg-slate-900/60 text-slate-400 border border-slate-800'
-                                        }`}
-                                      >
-                                        <span className="truncate mr-2">{opt.text}</span>
-                                        {isCorrect && (
-                                          <span className="text-emerald-400 text-[10px] font-bold shrink-0 bg-emerald-500/20 px-1.5 py-0.2 rounded">
-                                            ✓ เฉลย
-                                          </span>
-                                        )}
-                                      </div>
-                                    );
-                                  })}
-                                </div>
-                              )}
+                              {/* แสดงตัวเลือก / เฉลย (ติ๊กเลือกเฉลยแล้วกดบันทึก) */}
+                              {q.type === 'MULTIPLE_CHOICE' && Array.isArray(q.optionsPayload) && (() => {
+                                const pending = pendingAnswerChanges[q.id];
+                                const activeAnswerKey = pending !== undefined ? pending.answerKey : q.answerKey;
+                                const hasPendingChange = pending !== undefined && pending.answerKey !== q.answerKey;
 
-                              {q.type === 'TRUE_FALSE' && (
-                                <div className="text-[11px] text-slate-400 pt-0.5 flex items-center gap-1.5">
-                                  <span>เฉลย:</span>
-                                  <strong className="text-emerald-300 bg-slate-900 px-2 py-0.5 rounded border border-slate-800">
-                                    {q.answerKey === 'true' || q.answerKey === true
-                                      ? 'ถูกต้อง (True)'
-                                      : 'ผิด (False)'}
-                                  </strong>
-                                </div>
-                              )}
+                                return (
+                                  <div className="space-y-2 pt-1">
+                                    <div className="flex items-center justify-between text-[11px] text-slate-400">
+                                      <span className="flex items-center gap-1 font-medium text-slate-300">
+                                        <span>👆</span> ติ๊กเลือกตัวเลือก (ก-ง) แล้วกดปุ่ม <strong>"💾 บันทึกเฉลย"</strong> เพื่อยืนยัน
+                                      </span>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                      {q.optionsPayload.map((opt: any, oIdx: number) => {
+                                        const letter = ['ก', 'ข', 'ค', 'ง'][oIdx] || String(oIdx + 1);
+                                        const isSelected =
+                                          activeAnswerKey === opt.id ||
+                                          (Array.isArray(activeAnswerKey) && activeAnswerKey.includes(opt.id)) ||
+                                          activeAnswerKey === opt.text ||
+                                          (typeof activeAnswerKey === 'string' && (
+                                            (activeAnswerKey.toLowerCase() === 'c1' && opt.id === 'c1') ||
+                                            (activeAnswerKey.toLowerCase() === 'c2' && opt.id === 'c2') ||
+                                            (activeAnswerKey.toLowerCase() === 'c3' && opt.id === 'c3') ||
+                                            (activeAnswerKey.toLowerCase() === 'c4' && opt.id === 'c4') ||
+                                            (['ก', 'a', '1'].includes(activeAnswerKey.trim().toLowerCase()) && oIdx === 0) ||
+                                            (['ข', 'b', '2'].includes(activeAnswerKey.trim().toLowerCase()) && oIdx === 1) ||
+                                            (['ค', 'c', '3'].includes(activeAnswerKey.trim().toLowerCase()) && oIdx === 2) ||
+                                            (['ง', 'd', '4'].includes(activeAnswerKey.trim().toLowerCase()) && oIdx === 3)
+                                          ));
+
+                                        const isOriginalSaved =
+                                          q.answerKey === opt.id ||
+                                          (Array.isArray(q.answerKey) && q.answerKey.includes(opt.id)) ||
+                                          q.answerKey === opt.text ||
+                                          (typeof q.answerKey === 'string' && (
+                                            (q.answerKey.toLowerCase() === 'c1' && opt.id === 'c1') ||
+                                            (q.answerKey.toLowerCase() === 'c2' && opt.id === 'c2') ||
+                                            (q.answerKey.toLowerCase() === 'c3' && opt.id === 'c3') ||
+                                            (q.answerKey.toLowerCase() === 'c4' && opt.id === 'c4') ||
+                                            (['ก', 'a', '1'].includes(q.answerKey.trim().toLowerCase()) && oIdx === 0) ||
+                                            (['ข', 'b', '2'].includes(q.answerKey.trim().toLowerCase()) && oIdx === 1) ||
+                                            (['ค', 'c', '3'].includes(q.answerKey.trim().toLowerCase()) && oIdx === 2) ||
+                                            (['ง', 'd', '4'].includes(q.answerKey.trim().toLowerCase()) && oIdx === 3)
+                                          ));
+
+                                        return (
+                                          <button
+                                            key={opt.id || oIdx}
+                                            type="button"
+                                            onClick={() =>
+                                              handleSelectQuestionAnswer(
+                                                q.id,
+                                                q.answerKey,
+                                                opt.id,
+                                                `${letter}. ${opt.text}`
+                                              )
+                                            }
+                                            className={`p-2.5 px-3 rounded-xl text-[11px] flex items-center justify-between transition text-left group cursor-pointer active:scale-98 ${
+                                              isSelected && hasPendingChange
+                                                ? 'bg-amber-950/70 text-amber-200 border-2 border-amber-400 shadow-md ring-2 ring-amber-400/40 font-semibold'
+                                                : isSelected
+                                                ? 'bg-emerald-950/90 text-emerald-200 border-2 border-emerald-500 shadow-md ring-1 ring-emerald-500/50 font-semibold'
+                                                : 'bg-slate-900/70 hover:bg-slate-800 text-slate-300 border border-slate-700/80 hover:border-emerald-500/60'
+                                            }`}
+                                            title="คลิกเพื่อติ๊กเลือกข้อนี้เป็นเฉลย"
+                                          >
+                                            <div className="flex items-center gap-2 min-w-0 pr-2">
+                                              <input
+                                                type="radio"
+                                                name={`card_radio_${q.id}`}
+                                                checked={isSelected}
+                                                onChange={() =>
+                                                  handleSelectQuestionAnswer(
+                                                    q.id,
+                                                    q.answerKey,
+                                                    opt.id,
+                                                    `${letter}. ${opt.text}`
+                                                  )
+                                                }
+                                                className="accent-emerald-500 w-4 h-4 cursor-pointer shrink-0"
+                                              />
+                                              <span
+                                                className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 transition ${
+                                                  isSelected && hasPendingChange
+                                                    ? 'bg-amber-400 text-slate-950 shadow'
+                                                    : isSelected
+                                                    ? 'bg-emerald-500 text-slate-950 shadow'
+                                                    : 'bg-slate-800 text-slate-400 group-hover:bg-slate-700 group-hover:text-white border border-slate-700'
+                                                }`}
+                                              >
+                                                {letter}
+                                              </span>
+                                              <span className="truncate">{opt.text}</span>
+                                            </div>
+
+                                            {isSelected && hasPendingChange ? (
+                                              <span className="text-amber-300 text-[10px] font-bold shrink-0 bg-amber-500/20 px-2 py-0.5 rounded-full border border-amber-400/50 flex items-center gap-1 shadow-sm animate-pulse">
+                                                <span>👉</span> ติ๊กแล้ว (รอกดบันทึก)
+                                              </span>
+                                            ) : isSelected ? (
+                                              <span className="text-emerald-300 text-[10px] font-bold shrink-0 bg-emerald-500/20 px-2 py-0.5 rounded-full border border-emerald-500/40 flex items-center gap-1 shadow-sm">
+                                                <span>✓</span> เฉลยปัจจุบัน
+                                              </span>
+                                            ) : isOriginalSaved && hasPendingChange ? (
+                                              <span className="text-slate-500 text-[10px] shrink-0 line-through">
+                                                (เฉลยเดิม)
+                                              </span>
+                                            ) : (
+                                              <span className="text-slate-500 group-hover:text-emerald-400 text-[10px] shrink-0 opacity-0 group-hover:opacity-100 transition">
+                                                ติ๊กเลือก
+                                              </span>
+                                            )}
+                                          </button>
+                                        );
+                                      })}
+                                    </div>
+
+                                    {/* แถบแจ้งเตือนและปุ่มกดยืนยันบันทึกเฉลย (ติ๊กแล้วต้องกดปุ่มบันทึก) */}
+                                    {hasPendingChange && (
+                                      <div className="flex flex-wrap items-center justify-between gap-2.5 p-3 bg-gradient-to-r from-amber-950/90 to-slate-900 border-2 border-amber-500/80 rounded-2xl mt-2.5 shadow-xl animate-fadeIn">
+                                        <div className="flex items-center gap-2.5 text-xs">
+                                          <span className="text-amber-400 text-base animate-bounce">⚠️</span>
+                                          <div>
+                                            <div className="flex items-center gap-1.5 flex-wrap">
+                                              <span className="text-amber-200 font-bold">ติ๊กเลือกเฉลยใหม่เป็น:</span>
+                                              <span className="text-white font-bold bg-amber-600/70 px-2 py-0.5 rounded-lg border border-amber-400/70 font-mono">
+                                                {pending.choiceLabel}
+                                              </span>
+                                            </div>
+                                            <p className="text-amber-300/90 text-[11px] mt-0.5">
+                                              * ยังไม่ได้บันทึก กรุณากดปุ่ม <strong>"💾 บันทึกเฉลยข้อนี้"</strong> เพื่อยืนยัน
+                                            </p>
+                                          </div>
+                                        </div>
+                                        <div className="flex items-center gap-2 shrink-0">
+                                          <button
+                                            type="button"
+                                            onClick={() => handleCancelPendingAnswer(q.id)}
+                                            className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold rounded-xl transition border border-slate-700 active:scale-95"
+                                          >
+                                            ยกเลิก
+                                          </button>
+                                          <button
+                                            type="button"
+                                            onClick={() => handleSavePendingAnswer(exam.accessCode, q.id, idx)}
+                                            className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl shadow-lg transition flex items-center gap-1.5 active:scale-95 ring-2 ring-emerald-400/60 animate-pulse hover:animate-none"
+                                          >
+                                            <span>💾</span>
+                                            <span>บันทึกเฉลยข้อนี้</span>
+                                          </button>
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })()}
+
+                              {/* TRUE_FALSE (ติ๊กเลือกเฉลยแล้วกดบันทึก) */}
+                              {q.type === 'TRUE_FALSE' && (() => {
+                                const pending = pendingAnswerChanges[q.id];
+                                const activeAnswerKey = pending !== undefined ? pending.answerKey : q.answerKey;
+                                const hasPendingChange = pending !== undefined && pending.answerKey !== q.answerKey;
+                                const isTrueSelected = activeAnswerKey === 'true' || activeAnswerKey === true;
+                                const isFalseSelected = activeAnswerKey === 'false' || activeAnswerKey === false;
+
+                                return (
+                                  <div className="space-y-2 pt-1">
+                                    <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-400">
+                                      <span className="font-medium text-slate-300">👆 ติ๊กเลือกเฉลย:</span>
+                                      <div className="flex items-center gap-2">
+                                        <button
+                                          type="button"
+                                          onClick={() =>
+                                            handleSelectQuestionAnswer(
+                                              q.id,
+                                              q.answerKey,
+                                              'true',
+                                              'ถูกต้อง (True)'
+                                            )
+                                          }
+                                          className={`px-3.5 py-1.5 rounded-xl font-bold text-xs transition flex items-center gap-2 border active:scale-95 ${
+                                            isTrueSelected && hasPendingChange
+                                              ? 'bg-amber-950 text-amber-200 border-amber-400 shadow ring-2 ring-amber-400/40'
+                                              : isTrueSelected
+                                              ? 'bg-emerald-950 text-emerald-300 border-emerald-500 shadow ring-1 ring-emerald-500/40'
+                                              : 'bg-slate-900/80 hover:bg-slate-800 text-slate-400 border-slate-700'
+                                          }`}
+                                          title="ติ๊กเลือก ถูกต้อง (True)"
+                                        >
+                                          <input
+                                            type="radio"
+                                            name={`tf_radio_${q.id}`}
+                                            checked={isTrueSelected}
+                                            onChange={() =>
+                                              handleSelectQuestionAnswer(
+                                                q.id,
+                                                q.answerKey,
+                                                'true',
+                                                'ถูกต้อง (True)'
+                                              )
+                                            }
+                                            className="accent-emerald-500 w-3.5 h-3.5 cursor-pointer"
+                                          />
+                                          <span>ถูกต้อง (True)</span>
+                                          {isTrueSelected && hasPendingChange ? (
+                                            <span className="text-[10px] bg-amber-500/20 px-1.5 py-0.2 rounded text-amber-300 font-bold">
+                                              👉 ติ๊กแล้ว
+                                            </span>
+                                          ) : isTrueSelected ? (
+                                            <span className="text-[10px] bg-emerald-500/20 px-1.5 py-0.2 rounded text-emerald-300 font-bold">
+                                              ✓ เฉลยปัจจุบัน
+                                            </span>
+                                          ) : null}
+                                        </button>
+
+                                        <button
+                                          type="button"
+                                          onClick={() =>
+                                            handleSelectQuestionAnswer(
+                                              q.id,
+                                              q.answerKey,
+                                              'false',
+                                              'ผิด (False)'
+                                            )
+                                          }
+                                          className={`px-3.5 py-1.5 rounded-xl font-bold text-xs transition flex items-center gap-2 border active:scale-95 ${
+                                            isFalseSelected && hasPendingChange
+                                              ? 'bg-amber-950 text-amber-200 border-amber-400 shadow ring-2 ring-amber-400/40'
+                                              : isFalseSelected
+                                              ? 'bg-rose-950 text-rose-300 border-rose-500 shadow ring-1 ring-rose-500/40'
+                                              : 'bg-slate-900/80 hover:bg-slate-800 text-slate-400 border-slate-700'
+                                          }`}
+                                          title="ติ๊กเลือก ผิด (False)"
+                                        >
+                                          <input
+                                            type="radio"
+                                            name={`tf_radio_${q.id}`}
+                                            checked={isFalseSelected}
+                                            onChange={() =>
+                                              handleSelectQuestionAnswer(
+                                                q.id,
+                                                q.answerKey,
+                                                'false',
+                                                'ผิด (False)'
+                                              )
+                                            }
+                                            className="accent-rose-500 w-3.5 h-3.5 cursor-pointer"
+                                          />
+                                          <span>ผิด (False)</span>
+                                          {isFalseSelected && hasPendingChange ? (
+                                            <span className="text-[10px] bg-amber-500/20 px-1.5 py-0.2 rounded text-amber-300 font-bold">
+                                              👉 ติ๊กแล้ว
+                                            </span>
+                                          ) : isFalseSelected ? (
+                                            <span className="text-[10px] bg-rose-500/20 px-1.5 py-0.2 rounded text-rose-300 font-bold">
+                                              ✓ เฉลยปัจจุบัน
+                                            </span>
+                                          ) : null}
+                                        </button>
+                                      </div>
+                                    </div>
+
+                                    {/* แถบแจ้งเตือนและปุ่มกดยืนยันบันทึกเฉลยสำหรับ True/False */}
+                                    {hasPendingChange && (
+                                      <div className="flex flex-wrap items-center justify-between gap-2.5 p-3 bg-gradient-to-r from-amber-950/90 to-slate-900 border-2 border-amber-500/80 rounded-2xl mt-2 shadow-xl animate-fadeIn">
+                                        <div className="flex items-center gap-2 text-xs">
+                                          <span className="text-amber-400 text-base animate-bounce">⚠️</span>
+                                          <div>
+                                            <div className="flex items-center gap-1.5 flex-wrap">
+                                              <span className="text-amber-200 font-bold">ติ๊กเลือกเฉลยใหม่:</span>
+                                              <span className="text-white font-bold bg-amber-600/70 px-2 py-0.5 rounded-lg border border-amber-400/70 font-mono">
+                                                {pending.choiceLabel}
+                                              </span>
+                                            </div>
+                                            <p className="text-amber-300/90 text-[11px] mt-0.5">
+                                              * ยังไม่ได้บันทึก กรุณากดปุ่ม <strong>"💾 บันทึกเฉลยข้อนี้"</strong> เพื่อยืนยัน
+                                            </p>
+                                          </div>
+                                        </div>
+                                        <div className="flex items-center gap-2 shrink-0">
+                                          <button
+                                            type="button"
+                                            onClick={() => handleCancelPendingAnswer(q.id)}
+                                            className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold rounded-xl transition border border-slate-700 active:scale-95"
+                                          >
+                                            ยกเลิก
+                                          </button>
+                                          <button
+                                            type="button"
+                                            onClick={() => handleSavePendingAnswer(exam.accessCode, q.id, idx)}
+                                            className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl shadow-lg transition flex items-center gap-1.5 active:scale-95 ring-2 ring-emerald-400/60 animate-pulse hover:animate-none"
+                                          >
+                                            <span>💾</span>
+                                            <span>บันทึกเฉลยข้อนี้</span>
+                                          </button>
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })()}
 
                               {q.type === 'FILL_IN_BLANK' && (
                                 <div className="text-[11px] text-slate-400 pt-0.5 flex items-center gap-1.5">
@@ -2122,14 +2685,20 @@ export default function AdminDashboardPage() {
             <div className="flex items-center justify-between border-b border-slate-800 pb-2">
               <div>
                 <h3 className="text-base font-bold text-white flex items-center gap-2">
-                  <span>✏️</span> เพิ่มข้อสอบข้อใหม่
+                  <span>{editingQuestionId ? '✏️' : '➕'}</span>{' '}
+                  {editingQuestionId ? 'แก้ไขข้อสอบ' : 'เพิ่มข้อสอบข้อใหม่'}
                 </h3>
                 <p className="text-xs text-slate-400">
-                  เพิ่มข้อสอบและตั้งค่าเฉลยได้อย่างรวดเร็ว
+                  {editingQuestionId
+                    ? 'แก้ไขโจทย์ ตัวเลือก รูปภาพ คะแนน และเปลี่ยนเฉลย'
+                    : 'เพิ่มข้อสอบและตั้งค่าเฉลยได้อย่างรวดเร็ว'}
                 </p>
               </div>
               <button
-                onClick={() => setShowAddQuestionModal(false)}
+                onClick={() => {
+                  setShowAddQuestionModal(false);
+                  resetQuestionForm();
+                }}
                 className="text-slate-400 hover:text-white text-lg p-1"
               >
                 ✕
@@ -2398,7 +2967,10 @@ export default function AdminDashboardPage() {
               <div className="flex gap-2 pt-2">
                 <button
                   type="button"
-                  onClick={() => setShowAddQuestionModal(false)}
+                  onClick={() => {
+                    setShowAddQuestionModal(false);
+                    resetQuestionForm();
+                  }}
                   className="flex-1 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-xl transition"
                 >
                   ยกเลิก
@@ -2407,7 +2979,8 @@ export default function AdminDashboardPage() {
                   type="submit"
                   className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl transition shadow-lg flex items-center justify-center gap-1.5"
                 >
-                  <span>💾</span> บันทึกข้อสอบลงชุดนี้
+                  <span>💾</span>{' '}
+                  {editingQuestionId ? 'บันทึกการแก้ไขข้อสอบ' : 'บันทึกข้อสอบลงชุดนี้'}
                 </button>
               </div>
             </form>
@@ -3122,6 +3695,129 @@ export default function AdminDashboardPage() {
           </div>
         </div>
       )}
+
+      {/* 9.5 Quick Answer Key Modal (วางเฉลยด่วนจาก AI เช่น 1 ค | 2 ก | 3 ง หรือ 1. ค 2. ก) */}
+      {showQuickAnswerModal && (() => {
+        const targetExam = exams.find((e) => e.accessCode === quickAnswerTargetCode);
+        const parsed = parseAnswerKeyString(quickAnswerRawText);
+        const parsedKeys = Object.keys(parsed);
+        const parsedCount = parsedKeys.length;
+
+        return (
+          <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+            <div className="max-w-xl w-full bg-slate-900 border border-slate-700 rounded-3xl p-6 shadow-2xl space-y-4 text-left my-auto animate-fadeIn">
+              {/* Modal Header */}
+              <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-amber-600 to-yellow-500 text-white flex items-center justify-center text-xl shadow-inner font-bold">
+                    🎯
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-white flex items-center gap-2">
+                      <span>วางเฉลยด่วนจาก AI (Quick Paste Answer Key)</span>
+                    </h3>
+                    <p className="text-xs text-slate-400">
+                      คัดลอกข้อความเฉลยจาก ChatGPT, Claude, Gemini หรือ Word มาวางเพื่อตั้งเฉลยทุกข้อในคลิกเดียว
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowQuickAnswerModal(false)}
+                  className="text-slate-400 hover:text-white text-lg p-1"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {/* Target Exam Info */}
+              <div className="bg-slate-950/70 p-3 rounded-2xl border border-slate-800 flex items-center justify-between text-xs">
+                <span className="text-slate-400">ชุดวิชาที่จะอัปเดตเฉลย:</span>
+                <span className="font-bold text-emerald-400 flex items-center gap-1.5 font-mono">
+                  <span>{targetExam?.emoji || '📝'}</span>
+                  <span>{targetExam?.subjectName}</span>
+                  <span className="text-slate-500 font-normal">({targetExam?.questions.length || 0} ข้อ)</span>
+                </span>
+              </div>
+
+              {/* Guide Note */}
+              <div className="bg-amber-950/30 border border-amber-500/30 rounded-2xl p-3 text-xs text-amber-200/90 space-y-1">
+                <p className="font-bold text-amber-300 flex items-center gap-1">
+                  <span>💡</span> รูปแบบที่ระบบรองรับอัตโนมัติ:
+                </p>
+                <div className="font-mono text-[11px] text-slate-300 bg-slate-950/60 p-2 rounded-xl border border-slate-800 space-y-1">
+                  <p className="text-emerald-400 font-semibold">• 1 ค | 2 ก | 3 ง | 4 ข | 5 ง (แบบในรูปภาพจาก AI)</p>
+                  <p className="text-slate-400">• 1. ค 2. ก 3. ง 4. ข หรือ 1) ค 2) ก</p>
+                  <p className="text-slate-400">• หรือตาราง Markdown | 1 | ค | 2 | ก |</p>
+                </div>
+              </div>
+
+              {/* Textarea */}
+              <div className="space-y-1.5">
+                <label className="block text-slate-300 font-bold text-xs">
+                  วางข้อความเฉลยที่คัดลอกมาที่นี่:
+                </label>
+                <textarea
+                  rows={4}
+                  value={quickAnswerRawText}
+                  onChange={(e) => setQuickAnswerRawText(e.target.value)}
+                  placeholder={`ตัวอย่างเช่น:\n1 ค | 2 ก | 3 ง | 4 ข | 5 ง | 6 ค | 7 ก | 8 ข | 9 ค | 10 ง\n11 ข | 12 ก | 13 ง | 14 ค | 15 ข | 16 ก | 17 ค | 18 ข | 19 ก | 20 ง`}
+                  className="w-full p-3 bg-slate-950 border border-slate-700 rounded-2xl text-xs text-white outline-none focus:border-amber-400 font-mono leading-relaxed"
+                />
+              </div>
+
+              {/* Live Preview of Parsed Keys */}
+              {parsedCount > 0 ? (
+                <div className="bg-slate-950/80 p-3 rounded-2xl border border-emerald-500/40 space-y-2">
+                  <div className="flex items-center justify-between text-xs font-bold text-emerald-400">
+                    <span className="flex items-center gap-1">
+                      <span>✓</span> ตรวจพบเฉลยทั้งหมด {parsedCount} ข้อ:
+                    </span>
+                    <span className="text-[10px] text-slate-400 font-normal">พร้อมนำไปบันทึกลงในข้อสอบ</span>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto pr-1">
+                    {parsedKeys
+                      .map(Number)
+                      .sort((a, b) => a - b)
+                      .map((qNum) => (
+                        <span
+                          key={qNum}
+                          className="px-2 py-0.5 bg-emerald-950/80 border border-emerald-500/40 text-emerald-300 rounded-lg text-xs font-mono font-bold flex items-center gap-1"
+                        >
+                          <span className="text-slate-400 text-[10px]">ข้อ {qNum}:</span>
+                          <span className="text-amber-300">{parsed[qNum].letter}</span>
+                        </span>
+                      ))}
+                  </div>
+                </div>
+              ) : quickAnswerRawText.trim() ? (
+                <div className="bg-red-950/40 border border-red-500/30 p-2.5 rounded-xl text-xs text-red-300 flex items-center gap-1.5">
+                  <span>⚠️</span> ยังตรวจไม่พบรูปแบบข้อและเฉลย กรุณาตรวจสอบว่ามีเลขข้อและตัวเลือก ก-ง
+                </div>
+              ) : null}
+
+              {/* Modal Actions */}
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowQuickAnswerModal(false)}
+                  className="flex-1 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-xl transition text-xs"
+                >
+                  ยกเลิก
+                </button>
+                <button
+                  type="button"
+                  disabled={parsedCount === 0}
+                  onClick={handleApplyQuickAnswers}
+                  className="flex-1 py-2.5 bg-amber-600 hover:bg-amber-500 disabled:bg-slate-800 disabled:text-slate-600 text-white font-bold rounded-xl transition shadow-lg flex items-center justify-center gap-1.5 text-xs active:scale-95"
+                >
+                  <span>💾</span>
+                  <span>ยืนยันบันทึกเฉลย ({parsedCount} ข้อ)</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
 
       {/* =================================================================== */}
