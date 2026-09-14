@@ -233,7 +233,40 @@ export function saveExamsToStorage(exams: ExamRecord[]): void {
     } catch (e) {
       console.error('Failed to save exams to localStorage:', e);
     }
+
+    // ซิงค์บันทึกข้อมูลไปยังเซิร์ฟเวอร์แบบเรียลไทม์ (เพื่อให้เปิดในเบราว์เซอร์อื่นหรือส่งให้นักเรียนเห็นข้อมูลตรงกันทันที)
+    try {
+      fetch('/api/exams', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ exams }),
+      }).catch((err) => {
+        console.warn('Sync exams to server background warning:', err);
+      });
+    } catch (e) {
+      // ignore network errors
+    }
   }
+}
+
+export async function fetchExamsFromServer(): Promise<ExamRecord[]> {
+  if (typeof window !== 'undefined') {
+    try {
+      const res = await fetch('/api/exams');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && Array.isArray(data.exams) && data.exams.length > 0) {
+          try {
+            localStorage.setItem('krusos_exams_data', JSON.stringify(data.exams));
+          } catch (e) {}
+          return data.exams;
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to fetch exams from server, falling back to local storage:', e);
+    }
+  }
+  return getAllExams();
 }
 
 export function getExamByAccessCode(code: string): ExamRecord | undefined {
@@ -241,3 +274,4 @@ export function getExamByAccessCode(code: string): ExamRecord | undefined {
   const all = getAllExams();
   return all.find((e) => e.accessCode.toUpperCase() === clean);
 }
+

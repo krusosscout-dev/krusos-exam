@@ -1,9 +1,9 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { ExamGateway } from '@/components/ExamGateway';
-import { getExamByAccessCode, shuffleArray } from '@/services/examData';
+import { getExamByAccessCode, fetchExamsFromServer, shuffleArray, ExamRecord } from '@/services/examData';
 import Link from 'next/link';
 
 export default function GatewayPage({
@@ -14,8 +14,21 @@ export default function GatewayPage({
   const router = useRouter();
   const { accessCode } = params;
 
-  // ค้นหาชุดข้อสอบตามรหัสที่ส่งมาในลิงก์ (เช่น EXAM-SCI-01, EXAM-MATH-01)
-  const exam = getExamByAccessCode(accessCode);
+  // ค้นหาชุดข้อสอบตามรหัสที่ส่งมาในลิงก์ (รองรับโหลดแบบแคช และซิงค์สดจากเซิร์ฟเวอร์ข้ามเบราว์เซอร์)
+  const [exam, setExam] = useState<ExamRecord | undefined>(() => getExamByAccessCode(accessCode));
+
+  useEffect(() => {
+    fetchExamsFromServer().then((allExams) => {
+      if (allExams && allExams.length > 0) {
+        const found = allExams.find(
+          (e) => e.accessCode.toUpperCase() === accessCode.trim().toUpperCase()
+        );
+        if (found) {
+          setExam(found);
+        }
+      }
+    });
+  }, [accessCode]);
 
   const fallbackExam = {
     title: `แบบทดสอบรหัส ${accessCode.toUpperCase()}`,

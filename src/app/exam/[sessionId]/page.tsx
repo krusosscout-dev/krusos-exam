@@ -111,6 +111,13 @@ export default function StudentExamPage({
         const filtered = results.filter((r: any) => !(r.accessCode === accessCode.toUpperCase() && ((hasCard && r.studentId === studentCard) || (!hasCard && r.studentName === studentName && r.classroom === classroom))));
         filtered.push(newRecord);
         localStorage.setItem('krusos_student_results', JSON.stringify(filtered));
+
+        // ส่งผลสอบขึ้นเซิร์ฟเวอร์แบบเรียลไทม์ เพื่อให้ครูผู้สอนเห็นคะแนนทันทีในแดชบอร์ด
+        fetch('/api/results', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ result: newRecord }),
+        }).catch((err) => console.warn('Sync result to server warning:', err));
       } catch (e) {
         console.error('Error saving score to local registry:', e);
       }

@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { INITIAL_EXAMS, getAllExams, ExamRecord } from '@/services/examData';
+import { INITIAL_EXAMS, getAllExams, fetchExamsFromServer, ExamRecord } from '@/services/examData';
 
 export default function HomePage() {
   const [examCode, setExamCode] = useState('');
@@ -25,17 +25,29 @@ export default function HomePage() {
   };
 
   useEffect(() => {
+    const applyExamsFilter = (list: ExamRecord[]) => {
+      if (typeof window !== 'undefined') {
+        const active = list.filter((exam) => {
+          const isClosed = localStorage.getItem(`exam_closed_${exam.accessCode.toUpperCase()}`) === 'true';
+          if (isClosed) return false;
+          return exam.isOpen !== false;
+        });
+        setExams(active);
+      } else {
+        setExams(list);
+      }
+    };
+
+    // 1. โหลดข้อมูลแคชเบื้องต้นทันที
     const loaded = getAllExams();
-    if (typeof window !== 'undefined') {
-      const active = loaded.filter((exam) => {
-        const isClosed = localStorage.getItem(`exam_closed_${exam.accessCode.toUpperCase()}`) === 'true';
-        if (isClosed) return false;
-        return exam.isOpen !== false;
-      });
-      setExams(active);
-    } else {
-      setExams(loaded);
-    }
+    applyExamsFilter(loaded);
+
+    // 2. ซิงค์ข้อมูลล่าสุดจากเซิร์ฟเวอร์แบบเรียลไทม์
+    fetchExamsFromServer().then((latest) => {
+      if (latest && latest.length > 0) {
+        applyExamsFilter(latest);
+      }
+    });
   }, []);
 
   const handleJoinByCode = (e: React.FormEvent) => {
