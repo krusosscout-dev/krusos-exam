@@ -15,10 +15,39 @@ function parseBulkExamText(
   if (!text || !text.trim()) return [];
 
   const clean = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').trim();
-  const questionBlocks = clean.split(/(?:^|\n+)(?:ข้อที่\s*|ข้อ\s*)?(\d+)[\.\)]\s*/g);
+
+  // 1. ตรวจสอบว่ามีส่วน "เฉลยรวมท้ายข้อสอบ" หรือไม่ เช่น "เฉลย: 1. ค 2. ข 3. ก"
+  const globalAnswerKeys: Record<number, string> = {};
+  const answerSectionMatch = clean.match(/(?:เฉลยรวม|เฉลยคำตอบ|เฉลยแบบทดสอบ|เฉลยข้อสอบ|เฉลย)[\s:]*([\s\S]*)$/i);
+  let mainText = clean;
+  if (answerSectionMatch && answerSectionMatch.index !== undefined && answerSectionMatch.index > 30) {
+    const ansText = answerSectionMatch[1];
+    const ansMatches = [...ansText.matchAll(/(?:ข้อ\s*)?(\d+)[\.\)\s:-]+([กขคงabcdABCD1-4])/g)];
+    for (const m of ansMatches) {
+      const qNum = parseInt(m[1], 10);
+      const letter = m[2].toLowerCase();
+      const map: Record<string, string> = {
+        'ก': 'c1', 'a': 'c1', '1': 'c1',
+        'ข': 'c2', 'b': 'c2', '2': 'c2',
+        'ค': 'c3', 'c': 'c3', '3': 'c3',
+        'ง': 'c4', 'd': 'c4', '4': 'c4'
+      };
+      if (map[letter]) {
+        globalAnswerKeys[qNum] = map[letter];
+      }
+    }
+    // ตัดส่วนเฉลยท้ายข้อสอบออก เพื่อไม่ให้กลายเป็นข้อสอบอีกข้อ
+    if (ansMatches.length > 0) {
+      mainText = clean.substring(0, answerSectionMatch.index).trim();
+    }
+  }
+
+  // 2. แยกตามเลขข้อ: 1. หรือ 1) หรือ ข้อ 1. หรือ ข้อ 1)
+  const questionBlocks = mainText.split(/(?:^|\n+)(?:ข้อที่\s*|ข้อ\s*)?(\d+)[\.\)]\s*/g);
   const results: QuestionDefinition[] = [];
 
   for (let i = 1; i < questionBlocks.length; i += 2) {
+    const qNumberDetected = parseInt(questionBlocks[i], 10) || (results.length + 1);
     const content = (questionBlocks[i + 1] || '').trim();
     if (!content) continue;
 
@@ -50,7 +79,7 @@ function parseBulkExamText(
 
     if (isEssay) {
       results.push({
-        id: `q_bulk_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+        id: `q_bulk_${Date.now()}_${results.length + 1}`,
         examId: targetExamId,
         questionNumber: results.length + 1,
         type: 'ESSAY',
@@ -70,7 +99,7 @@ function parseBulkExamText(
         answer = 'false';
       }
       results.push({
-        id: `q_bulk_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+        id: `q_bulk_${Date.now()}_${results.length + 1}`,
         examId: targetExamId,
         questionNumber: results.length + 1,
         type: 'TRUE_FALSE',
@@ -81,38 +110,70 @@ function parseBulkExamText(
         answerKey: answer,
       });
     } else {
-      // MULTIPLE_CHOICE
+      // MULTIPLE_CHOICE: ค้นหาตัวเลือก ทั้งแบบบรรทัดละข้อ และแบบหลายตัวเลือกในบรรทัดเดียว
       const choiceLines: { id: string; text: string; isCorrect: boolean }[] = [];
       const choiceIds = ['c1', 'c2', 'c3', 'c4'];
-      let correctChoice = 'c1';
+      let correctChoice = globalAnswerKeys[qNumberDetected] || null;
 
-      for (const line of lines.slice(1)) {
-        const choiceMatch = line.match(/^[กขคงabcdABCD1-4][\.\)]\s*(.*)/);
-        if (choiceMatch) {
-          let cText = choiceMatch[1].trim();
-          let isCorrect = false;
-          if (cText.endsWith('*') || cText.includes('(ถูก)') || cText.includes('(เฉลย)')) {
+      // รวมเนื้อหาบรรทัดหลังจากโจทย์เพื่อแยกช้อยส์
+      const restContent = lines.slice(1).join('\n');
+      
+      // ตรวจจับตัวเลือก ก-ง หรือ A-D (รองรับ * นำหน้า เช่น *ค. หรือตามหลัง เช่น ค.* หรือ (เฉลย))
+      const choiceRegex = /(?:^|\n|\s+)([\*\✓\✔]?)\s*\(?([กขคงabcdABCD1-4])\)?[\.\s\)]\s*([^\n\r]*?)(?=(?:\s+[\*\✓\✔]?\s*\(?[กขคงabcdABCD1-4]\)?[\.\s\)])|\n|$)/g;
+      const matches = [...restContent.matchAll(choiceRegex)];
+
+      if (matches.length > 0) {
+        for (const m of matches) {
+          const leadingMark = m[1] || '';
+          let cText = (m[3] || '').trim();
+          let isCorrect = Boolean(leadingMark.includes('*') || leadingMark.includes('✓') || leadingMark.includes('✔'));
+
+          if (cText.endsWith('*') || cText.includes('(ถูก)') || cText.includes('(เฉลย)') || cText.includes('[x]')) {
             isCorrect = true;
-            cText = cText.replace(/\*|\(ถูก\)|\(เฉลย\)/g, '').trim();
+            cText = cText.replace(/\*|\(ถูก\)|\(เฉลย\)|\[x\]/g, '').trim();
           }
+
           const cId = choiceIds[choiceLines.length] || `c${choiceLines.length + 1}`;
           choiceLines.push({ id: cId, text: cText, isCorrect });
-          if (isCorrect) {
+          if (isCorrect && !correctChoice) {
             correctChoice = cId;
+          }
+        }
+      } else {
+        // Fallback line-by-line
+        for (const line of lines.slice(1)) {
+          const choiceMatch = line.match(/^[\*\✓\✔\s\-]*\(?([กขคงabcdABCD1-4])\)?[\.\s\)]\s*(.*)/);
+          if (choiceMatch) {
+            let cText = choiceMatch[2].trim();
+            let isCorrect = line.startsWith('*') || line.startsWith('✓');
+            if (cText.endsWith('*') || cText.includes('(ถูก)') || cText.includes('(เฉลย)')) {
+              isCorrect = true;
+              cText = cText.replace(/\*|\(ถูก\)|\(เฉลย\)/g, '').trim();
+            }
+            const cId = choiceIds[choiceLines.length] || `c${choiceLines.length + 1}`;
+            choiceLines.push({ id: cId, text: cText, isCorrect });
+            if (isCorrect && !correctChoice) {
+              correctChoice = cId;
+            }
           }
         }
       }
 
-      // ตรวจสอบเฉลยบรรทัดพิเศษ เช่น "เฉลย: ข"
-      const ansLine = lines.find((l) => /(?:เฉลย|คำตอบ)[\s:]*([กขคงabcdABCD1-4])/i.test(l));
-      if (ansLine) {
-        const m = ansLine.match(/(?:เฉลย|คำตอบ)[\s:]*([กขคงabcdABCD1-4])/i);
-        if (m) {
-          const letter = m[1].toLowerCase();
-          if (letter === 'ก' || letter === 'a' || letter === '1') correctChoice = 'c1';
-          if (letter === 'ข' || letter === 'b' || letter === '2') correctChoice = 'c2';
-          if (letter === 'ค' || letter === 'c' || letter === '3') correctChoice = 'c3';
-          if (letter === 'ง' || letter === 'd' || letter === '4') correctChoice = 'c4';
+      // ตรวจสอบเฉลยบรรทัดพิเศษ เช่น "เฉลย: ค" หรือ "ตอบ: ค"
+      if (!correctChoice) {
+        const ansLine = lines.find((l) => /(?:เฉลย|คำตอบ|ตอบ)[\s:]*([กขคงabcdABCD1-4])/i.test(l));
+        if (ansLine) {
+          const m = ansLine.match(/(?:เฉลย|คำตอบ|ตอบ)[\s:]*([กขคงabcdABCD1-4])/i);
+          if (m) {
+            const letter = m[1].toLowerCase();
+            const map: Record<string, string> = {
+              'ก': 'c1', 'a': 'c1', '1': 'c1',
+              'ข': 'c2', 'b': 'c2', '2': 'c2',
+              'ค': 'c3', 'c': 'c3', '3': 'c3',
+              'ง': 'c4', 'd': 'c4', '4': 'c4'
+            };
+            if (map[letter]) correctChoice = map[letter];
+          }
         }
       }
 
@@ -123,7 +184,7 @@ function parseBulkExamText(
       }
 
       results.push({
-        id: `q_bulk_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+        id: `q_bulk_${Date.now()}_${results.length + 1}`,
         examId: targetExamId,
         questionNumber: results.length + 1,
         type: 'MULTIPLE_CHOICE',
@@ -131,7 +192,7 @@ function parseBulkExamText(
         mediaUrl,
         points: defaultScores.MULTIPLE_CHOICE ?? 1.0,
         optionsPayload: choiceLines.slice(0, 4),
-        answerKey: correctChoice,
+        answerKey: correctChoice || 'c1',
       });
     }
   }
@@ -2669,38 +2730,124 @@ export default function AdminDashboardPage() {
 
                 {/* Preview of Parsed Questions */}
                 {bulkParsedQuestions.length > 0 && (
-                  <div className="mt-3 bg-slate-950/80 border border-emerald-500/30 rounded-2xl p-3 space-y-2 max-h-56 overflow-y-auto">
-                    <div className="flex items-center justify-between text-[11px] font-bold text-emerald-400 border-b border-slate-800 pb-1.5">
-                      <span>✓ ข้อสอบที่พร้อมบันทึก ({bulkParsedQuestions.length} ข้อ):</span>
-                      <span className="text-slate-400 font-normal">ตรวจสอบความถูกต้องก่อนกดบันทึก</span>
+                  <div className="mt-3 bg-slate-950/90 border border-emerald-500/30 rounded-2xl p-3 space-y-2.5 max-h-72 overflow-y-auto">
+                    <div className="flex flex-wrap items-center justify-between text-[11px] font-bold text-emerald-400 border-b border-slate-800 pb-2 gap-2">
+                      <span className="flex items-center gap-1.5">
+                        <span>✓</span>
+                        <span>ตรวจพบ {bulkParsedQuestions.length} ข้อ (คลิกที่ตัวเลือกเพื่อเลือกเฉลยได้ทันที):</span>
+                      </span>
+                      <span className="text-[10px] text-slate-400 font-normal">
+                        สามารถคลิกปุ่มตัวเลือกเพื่อเปลี่ยนเฉลย หรือลบข้อที่ไม่ต้องการออกได้
+                      </span>
                     </div>
+
                     {bulkParsedQuestions.map((q, idx) => (
-                      <div key={idx} className="p-2 bg-slate-900/90 rounded-xl border border-slate-800 text-[11px] space-y-1">
-                        <div className="flex items-center justify-between">
-                          <span className="font-bold text-white">
-                            ข้อ {idx + 1}. {q.promptText}
-                          </span>
-                          <span className="text-[10px] px-1.5 py-0.5 bg-slate-800 text-emerald-400 rounded">
-                            {q.type === 'MULTIPLE_CHOICE' ? 'ปรนัย 4 ช้อยส์' : q.type === 'TRUE_FALSE' ? 'ถูก/ผิด' : q.type === 'ESSAY' ? 'อัตนัย' : 'เติมคำ'} ({q.points} คะแนน)
-                          </span>
+                      <div key={idx} className="p-3 bg-slate-900/90 rounded-2xl border border-slate-800 text-[11px] space-y-2">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="font-bold text-white text-xs leading-snug flex-1">
+                            <span className="text-emerald-400 font-mono mr-1">ข้อ {idx + 1}.</span>
+                            <span>{q.promptText}</span>
+                          </div>
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            <span className="text-[10px] px-2 py-0.5 bg-slate-800 text-emerald-400 font-medium rounded-lg border border-slate-700">
+                              {q.type === 'MULTIPLE_CHOICE' ? 'ปรนัย 4 ช้อยส์' : q.type === 'TRUE_FALSE' ? 'ถูก/ผิด' : q.type === 'ESSAY' ? 'อัตนัย' : 'เติมคำ'} ({q.points} คะแนน)
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setBulkParsedQuestions(bulkParsedQuestions.filter((_, i) => i !== idx));
+                              }}
+                              className="text-red-400 hover:text-red-300 text-[11px] px-1.5 py-0.5 rounded hover:bg-red-950/40"
+                              title="ลบข้อนี้ออกจากการนำเข้า"
+                            >
+                              ✕
+                            </button>
+                          </div>
                         </div>
+
                         {q.mediaUrl && (
-                          <span className="text-[10px] text-teal-400 flex items-center gap-1">
-                            🖼️ มีรูปภาพประกอบ: {q.mediaUrl.substring(0, 30)}...
-                          </span>
+                          <div className="text-[10px] text-teal-400 flex items-center gap-1">
+                            <span>🖼️ มีรูปภาพประกอบโจทย์:</span>
+                            <span className="font-mono text-slate-400 truncate max-w-xs">{q.mediaUrl}</span>
+                          </div>
                         )}
+
+                        {/* Interactive Clickable Choices for Multiple Choice */}
                         {q.type === 'MULTIPLE_CHOICE' && Array.isArray(q.optionsPayload) && (
-                          <div className="grid grid-cols-2 gap-1 text-slate-400 text-[10px] pt-1">
-                            {q.optionsPayload.map((opt: any) => (
-                              <div
-                                key={opt.id}
-                                className={`px-1.5 py-0.5 rounded truncate ${
-                                  q.answerKey === opt.id ? 'bg-emerald-950 text-emerald-300 font-bold border border-emerald-700/50' : ''
-                                }`}
-                              >
-                                {opt.text} {q.answerKey === opt.id && '✓'}
-                              </div>
-                            ))}
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 pt-1">
+                            {q.optionsPayload.map((opt: any) => {
+                              const isSelected = q.answerKey === opt.id;
+                              return (
+                                <button
+                                  key={opt.id}
+                                  type="button"
+                                  onClick={() => {
+                                    const updated = [...bulkParsedQuestions];
+                                    updated[idx].answerKey = opt.id;
+                                    setBulkParsedQuestions(updated);
+                                  }}
+                                  className={`px-2.5 py-2 rounded-xl text-left text-[11px] transition flex items-center justify-between border ${
+                                    isSelected
+                                      ? 'bg-emerald-950 text-emerald-300 font-bold border-emerald-500 shadow-sm'
+                                      : 'bg-slate-950/70 text-slate-300 border-slate-800 hover:border-slate-700 hover:bg-slate-800'
+                                  }`}
+                                  title="คลิกเพื่อเลือกข้อนี้เป็นเฉลย"
+                                >
+                                  <span className="truncate mr-2">{opt.text}</span>
+                                  <span
+                                    className={`text-[10px] font-bold px-1.5 py-0.5 rounded shrink-0 ${
+                                      isSelected
+                                        ? 'bg-emerald-500 text-black shadow-sm'
+                                        : 'text-slate-500 bg-slate-900 border border-slate-800'
+                                    }`}
+                                  >
+                                    {isSelected ? '✓ เฉลย' : 'คลิกเฉลย'}
+                                  </span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
+
+                        {/* Interactive Clickable for True/False */}
+                        {q.type === 'TRUE_FALSE' && (
+                          <div className="flex gap-2 pt-1">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const updated = [...bulkParsedQuestions];
+                                updated[idx].answerKey = 'true';
+                                setBulkParsedQuestions(updated);
+                              }}
+                              className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition flex items-center gap-1.5 ${
+                                q.answerKey === 'true' || q.answerKey === true
+                                  ? 'bg-emerald-950 text-emerald-300 border-emerald-500 shadow-sm'
+                                  : 'bg-slate-950 text-slate-400 border-slate-800 hover:bg-slate-800'
+                              }`}
+                            >
+                              <span>✓ ถูก (True)</span>
+                              {(q.answerKey === 'true' || q.answerKey === true) && (
+                                <span className="bg-emerald-500 text-black text-[10px] px-1 rounded font-bold">เฉลย</span>
+                              )}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const updated = [...bulkParsedQuestions];
+                                updated[idx].answerKey = 'false';
+                                setBulkParsedQuestions(updated);
+                              }}
+                              className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition flex items-center gap-1.5 ${
+                                q.answerKey === 'false' || q.answerKey === false
+                                  ? 'bg-red-950 text-red-300 border-red-500 shadow-sm'
+                                  : 'bg-slate-950 text-slate-400 border-slate-800 hover:bg-slate-800'
+                              }`}
+                            >
+                              <span>✕ ผิด (False)</span>
+                              {(q.answerKey === 'false' || q.answerKey === false) && (
+                                <span className="bg-red-500 text-white text-[10px] px-1 rounded font-bold">เฉลย</span>
+                              )}
+                            </button>
                           </div>
                         )}
                       </div>
