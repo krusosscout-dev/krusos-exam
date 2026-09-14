@@ -1315,28 +1315,32 @@ export default function AdminDashboardPage() {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans">
       {/* 1. Top Navbar */}
-      <header className="bg-slate-900 border-b border-slate-800 px-6 py-3 flex items-center justify-between sticky top-0 z-30 shadow-md">
-        <div className="flex items-center space-x-3">
+      <header className="bg-slate-900 border-b border-slate-800 px-3 sm:px-5 md:px-6 py-2.5 sm:py-3 flex items-center justify-between sticky top-0 z-30 shadow-md">
+        <div className="flex items-center space-x-2 sm:space-x-3 shrink-0">
           <img
             src="/logo.png"
             alt="โลโก้ระบบสอบออนไลน์"
-            className="w-10 h-10 object-contain drop-shadow-md"
+            className="w-8 h-8 sm:w-10 sm:h-10 object-contain drop-shadow-md shrink-0"
           />
-          <div>
-            <h1 className="text-sm font-bold text-white flex items-center gap-1.5">
-              <span className="text-emerald-400 font-mono font-bold">KruSos Exam</span>
-              <span className="text-slate-300">• จัดการข้อสอบ (Admin)</span>
+          <div className="min-w-0">
+            <h1 className="text-xs sm:text-sm font-bold text-white flex items-center gap-1 sm:gap-1.5 leading-tight whitespace-nowrap">
+              <span className="text-emerald-400 font-mono font-bold tracking-tight">KruSos Exam</span>
+              <span className="text-slate-300 hidden sm:inline">• จัดการข้อสอบ (Admin)</span>
             </h1>
-            <p className="text-xs text-slate-400">กลุ่มสาระสังคมศึกษาฯ • โรงเรียนวัดบางปูน</p>
+            <p className="text-[10px] sm:text-xs text-slate-400 truncate max-w-[160px] sm:max-w-none">
+              กลุ่มสาระสังคมศึกษาฯ • โรงเรียนวัดบางปูน
+            </p>
           </div>
         </div>
 
-        <div className="flex items-center space-x-2 sm:space-x-3">
-          <div className="text-right hidden sm:block">
-            <span className="text-xs font-semibold text-emerald-400 block">ครูผู้สอน (ครูซอส)</span>
-            <span className="text-[10px] text-slate-400">สถานะ: ล็อกอินเรียบร้อย</span>
+        <div className="flex items-center space-x-1.5 sm:space-x-2 md:space-x-3 shrink-0">
+          {/* ข้อมูลคุณครู แสดงเฉพาะจอขนาดใหญ่ (xl) เพื่อไม่ให้ดันปุ่มจนเบียดตกบรรทัด */}
+          <div className="text-right hidden xl:block mr-1">
+            <span className="text-xs font-semibold text-emerald-400 block whitespace-nowrap leading-tight">ครูผู้สอน (ครูซอส)</span>
+            <span className="text-[10px] text-slate-400 block whitespace-nowrap leading-tight">สถานะ: ล็อกอินเรียบร้อย</span>
           </div>
 
+          {/* ปุ่มเปลี่ยนรหัสผ่าน: จอเล็กแสดงเฉพาะไอคอนกุญแจ 🔑 จอใหญ่แสดงข้อความเต็ม */}
           <button
             onClick={() => {
               setChangePasswordError('');
@@ -1345,63 +1349,75 @@ export default function AdminDashboardPage() {
               setConfirmNewPasswordInput('');
               setShowChangePasswordModal(true);
             }}
-            className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 hover:border-emerald-500/50 text-xs font-medium rounded-lg text-emerald-400 hover:text-emerald-300 transition flex items-center gap-1.5 active:scale-95"
-            title="เปลี่ยนรหัสผ่านเข้าสู่ระบบ"
+            className="p-2 sm:px-3 sm:py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 hover:border-emerald-500/50 text-xs font-medium rounded-xl text-emerald-400 hover:text-emerald-300 transition flex items-center gap-1.5 active:scale-95 shadow-sm whitespace-nowrap"
+            title="เปลี่ยนรหัสผ่านเข้าสู่ระบบ (Change Password)"
           >
-            <span>🔑</span>
-            <span className="hidden sm:inline">เปลี่ยนรหัสผ่าน</span>
+            <span className="text-sm sm:text-xs">🔑</span>
+            <span className="hidden md:inline">เปลี่ยนรหัสผ่าน</span>
           </button>
 
+          {/* ปุ่มออกจากระบบ: จอเล็กแสดงเฉพาะไอคอนแม่กุญแจ 🔒 จอใหญ่แสดงข้อความเต็ม */}
           <button
             onClick={handleLogout}
-            className="px-3 py-1.5 bg-red-950/60 hover:bg-red-900 border border-red-800/80 text-xs font-medium rounded-lg text-red-200 transition"
+            className="p-2 sm:px-3 sm:py-1.5 bg-red-950/60 hover:bg-red-900 border border-red-800/80 text-xs font-medium rounded-xl text-red-200 hover:text-white transition flex items-center gap-1.5 active:scale-95 shadow-sm whitespace-nowrap"
+            title="ออกจากระบบ (Logout)"
           >
-            ออกจากระบบ 🔒
+            <span className="text-sm sm:text-xs">🔒</span>
+            <span className="hidden md:inline">ออกจากระบบ</span>
           </button>
 
+          {/* ปุ่มไปหน้านักเรียน: จอเล็กแสดงเฉพาะไอคอนหมวกบัณฑิต 🎓 จอใหญ่แสดงข้อความเต็ม */}
           <Link
             href="/"
-            className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-medium rounded-lg text-slate-300 transition"
+            className="p-2 sm:px-3 sm:py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-medium rounded-xl text-slate-300 hover:text-white transition flex items-center gap-1.5 active:scale-95 shadow-sm whitespace-nowrap"
+            title="กลับสู่หน้าแรกของนักเรียน (Student Portal)"
           >
-            ← หน้านักเรียน
+            <span className="text-sm sm:text-xs">🎓</span>
+            <span className="hidden md:inline">หน้านักเรียน</span>
           </Link>
         </div>
       </header>
 
-      {/* 2. Navigation Tabs */}
-      <div className="bg-slate-900/50 border-b border-slate-800 px-6 overflow-x-auto">
-        <div className="max-w-6xl mx-auto flex space-x-2 whitespace-nowrap">
+      {/* 2. Navigation Tabs (รองรับเลื่อนแนวนอนแบบนุ่มนวล ไม่ล้นจอ) */}
+      <div className="bg-slate-900/60 border-b border-slate-800 px-3 sm:px-6 overflow-x-auto">
+        <div className="max-w-6xl mx-auto flex space-x-1 sm:space-x-2 whitespace-nowrap min-w-max">
           <button
             onClick={() => setActiveTab('exams')}
-            className={`py-3 px-3.5 text-xs font-bold border-b-2 transition flex items-center gap-1.5 ${
+            className={`py-2.5 sm:py-3 px-3 sm:px-3.5 text-xs font-bold border-b-2 transition flex items-center gap-1.5 ${
               activeTab === 'exams'
-                ? 'border-emerald-500 text-emerald-400'
-                : 'border-transparent text-slate-400 hover:text-slate-200'
+                ? 'border-emerald-500 text-emerald-400 bg-emerald-500/5'
+                : 'border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
             }`}
           >
-            📋 จัดการชุดข้อสอบ & QR Code
+            <span>📋</span>
+            <span>จัดการชุดข้อสอบ</span>
+            <span className="hidden sm:inline">& QR Code</span>
           </button>
 
           <button
             onClick={() => setActiveTab('questions')}
-            className={`py-3 px-3.5 text-xs font-bold border-b-2 transition flex items-center gap-1.5 ${
+            className={`py-2.5 sm:py-3 px-3 sm:px-3.5 text-xs font-bold border-b-2 transition flex items-center gap-1.5 ${
               activeTab === 'questions'
-                ? 'border-emerald-500 text-emerald-400'
-                : 'border-transparent text-slate-400 hover:text-slate-200'
+                ? 'border-emerald-500 text-emerald-400 bg-emerald-500/5'
+                : 'border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
             }`}
           >
-            ✏️ คลังข้อสอบ (แยกตามวิชา)
+            <span>✏️</span>
+            <span>คลังข้อสอบ</span>
+            <span className="hidden sm:inline">(แยกตามวิชา)</span>
           </button>
 
           <button
             onClick={() => setActiveTab('scores')}
-            className={`py-3 px-3.5 text-xs font-bold border-b-2 transition flex items-center gap-1.5 ${
+            className={`py-2.5 sm:py-3 px-3 sm:px-3.5 text-xs font-bold border-b-2 transition flex items-center gap-1.5 ${
               activeTab === 'scores'
-                ? 'border-emerald-500 text-emerald-400'
-                : 'border-transparent text-slate-400 hover:text-slate-200'
+                ? 'border-emerald-500 text-emerald-400 bg-emerald-500/5'
+                : 'border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
             }`}
           >
-            🏆 ผลคะแนน & แท่นเกียรติยศ
+            <span>🏆</span>
+            <span>ผลคะแนน</span>
+            <span className="hidden sm:inline">& แท่นเกียรติยศ</span>
             <span className="bg-emerald-500/20 text-emerald-400 text-[10px] px-1.5 py-0.2 rounded-full font-bold">
               {studentScores.length}
             </span>
@@ -1409,13 +1425,14 @@ export default function AdminDashboardPage() {
 
           <button
             onClick={() => setActiveTab('essays')}
-            className={`py-3 px-3.5 text-xs font-bold border-b-2 transition flex items-center gap-1.5 ${
+            className={`py-2.5 sm:py-3 px-3 sm:px-3.5 text-xs font-bold border-b-2 transition flex items-center gap-1.5 ${
               activeTab === 'essays'
-                ? 'border-emerald-500 text-emerald-400'
-                : 'border-transparent text-slate-400 hover:text-slate-200'
+                ? 'border-emerald-500 text-emerald-400 bg-emerald-500/5'
+                : 'border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
             }`}
           >
-            ✍️ ตรวจข้อสอบอัตนัย
+            <span>✍️</span>
+            <span>ตรวจข้อสอบอัตนัย</span>
             <span className="bg-amber-500/20 text-amber-400 text-[10px] px-1.5 py-0.2 rounded-full">
               1 รอตรวจ
             </span>
@@ -1423,13 +1440,15 @@ export default function AdminDashboardPage() {
 
           <button
             onClick={() => setActiveTab('analytics')}
-            className={`py-3 px-3.5 text-xs font-bold border-b-2 transition flex items-center gap-1.5 ${
+            className={`py-2.5 sm:py-3 px-3 sm:px-3.5 text-xs font-bold border-b-2 transition flex items-center gap-1.5 ${
               activeTab === 'analytics'
-                ? 'border-emerald-500 text-emerald-400'
-                : 'border-transparent text-slate-400 hover:text-slate-200'
+                ? 'border-emerald-500 text-emerald-400 bg-emerald-500/5'
+                : 'border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
             }`}
           >
-            📊 วิเคราะห์คุณภาพข้อสอบ (p, r)
+            <span>📊</span>
+            <span>วิเคราะห์คุณภาพ</span>
+            <span className="hidden sm:inline">ข้อสอบ (p, r)</span>
           </button>
         </div>
       </div>
