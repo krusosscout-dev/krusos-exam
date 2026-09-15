@@ -876,13 +876,6 @@ export default function AdminDashboardPage() {
     showToast(`สร้างชุดข้อสอบ "${created.title}" เรียบร้อยแล้ว! วางข้อสอบทีละหลายข้อได้ทันที`, 'success');
   };
 
-  const handleRestoreDefaultExams = () => {
-    setExams(INITIAL_EXAMS);
-    saveExamsToStorage(INITIAL_EXAMS);
-    setSelectedQuestionExamCode(INITIAL_EXAMS[0].accessCode);
-    setSelectedScoreExamCode(INITIAL_EXAMS[0].accessCode);
-    showToast('โหลดชุดข้อสอบเริ่มต้น (3 วิชา) เรียบร้อยแล้ว ✓', 'success');
-  };
 
   const handleExportExamsJson = () => {
     try {
@@ -1517,15 +1510,6 @@ export default function AdminDashboardPage() {
               <div className="flex flex-wrap items-center gap-2">
                 <button
                   type="button"
-                  onClick={handleRestoreDefaultExams}
-                  className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-slate-700 hover:border-emerald-500/50 text-xs font-bold rounded-xl transition flex items-center gap-1.5 active:scale-95 shadow-sm"
-                  title="คืนค่าชุดข้อสอบเริ่มต้น 3 วิชา (ส21101, ส21102, ต้านทุจริต)"
-                >
-                  <span>🔄</span>
-                  <span className="hidden sm:inline">โหลดชุดเริ่มต้น</span>
-                </button>
-                <button
-                  type="button"
                   onClick={handleExportExamsJson}
                   className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-cyan-400 border border-slate-700 hover:border-cyan-500/50 text-xs font-bold rounded-xl transition flex items-center gap-1.5 active:scale-95 shadow-sm"
                   title="ดาวน์โหลดไฟล์สำรองข้อสอบทั้งหมด (.json) เพื่อเก็บไว้หรือนำไปเปิดในเครื่อง/เบราว์เซอร์อื่น"
@@ -1563,24 +1547,28 @@ export default function AdminDashboardPage() {
                 <div className="space-y-1">
                   <h3 className="text-base font-bold text-white">ยังไม่มีชุดข้อสอบในระบบ</h3>
                   <p className="text-xs text-slate-400 leading-relaxed">
-                    คุณครูสามารถกดสร้างชุดข้อสอบใหม่ หรือคลิกปุ่มด้านล่างเพื่อโหลดชุดข้อสอบตัวอย่าง 3 วิชาเริ่มต้นได้ทันทีครับ
+                    คุณครูสามารถกดสร้างชุดข้อสอบใหม่ หรือนำเข้าไฟล์สำรองข้อสอบ (.json) ได้ทันทีครับ
                   </p>
                 </div>
                 <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
                   <button
                     type="button"
-                    onClick={handleRestoreDefaultExams}
-                    className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl shadow-lg transition flex items-center gap-1.5 active:scale-95"
-                  >
-                    <span>🔄</span> คืนค่าชุดข้อสอบเริ่มต้น (3 วิชา)
-                  </button>
-                  <button
-                    type="button"
                     onClick={() => setShowCreateModal(true)}
-                    className="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-bold rounded-xl transition flex items-center gap-1.5 active:scale-95 shadow-sm"
+                    className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl shadow-lg transition flex items-center gap-1.5 active:scale-95"
                   >
                     <span>+</span> สร้างชุดข้อสอบใหม่
                   </button>
+                  <label
+                    className="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 text-xs font-bold rounded-xl transition flex items-center gap-1.5 active:scale-95 shadow-sm cursor-pointer"
+                  >
+                    <span>📥</span> นำเข้าไฟล์สำรอง JSON
+                    <input
+                      type="file"
+                      accept=".json"
+                      className="hidden"
+                      onChange={handleImportExamsJson}
+                    />
+                  </label>
                 </div>
               </div>
             ) : (
