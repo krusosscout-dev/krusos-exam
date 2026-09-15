@@ -213,9 +213,9 @@ export function getAllExams(): ExamRecord[] {
   if (typeof window !== 'undefined') {
     try {
       const stored = localStorage.getItem('krusos_exams_data');
-      if (stored) {
+      if (stored !== null) {
         const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed) && parsed.length > 0) {
+        if (Array.isArray(parsed)) {
           return parsed;
         }
       }
@@ -255,7 +255,7 @@ export async function fetchExamsFromServer(): Promise<ExamRecord[]> {
       const res = await fetch('/api/exams');
       if (res.ok) {
         const data = await res.json();
-        if (data.success && Array.isArray(data.exams) && data.exams.length > 0) {
+        if (data.success && Array.isArray(data.exams)) {
           try {
             localStorage.setItem('krusos_exams_data', JSON.stringify(data.exams));
           } catch (e) {}

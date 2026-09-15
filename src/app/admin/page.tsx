@@ -289,7 +289,7 @@ export default function AdminDashboardPage() {
 
       // ซิงค์ข้อมูลล่าสุดจากเซิร์ฟเวอร์แบบเรียลไทม์ (เพื่อให้เปิดในเบราว์เซอร์อื่นก็เห็นข้อมูลชุดเดียวกัน)
       fetchExamsFromServer().then((latest) => {
-        if (latest && latest.length > 0) {
+        if (Array.isArray(latest)) {
           setExams(latest);
         }
       });
@@ -876,6 +876,55 @@ export default function AdminDashboardPage() {
     showToast(`สร้างชุดข้อสอบ "${created.title}" เรียบร้อยแล้ว! วางข้อสอบทีละหลายข้อได้ทันที`, 'success');
   };
 
+  const handleRestoreDefaultExams = () => {
+    setExams(INITIAL_EXAMS);
+    saveExamsToStorage(INITIAL_EXAMS);
+    setSelectedQuestionExamCode(INITIAL_EXAMS[0].accessCode);
+    setSelectedScoreExamCode(INITIAL_EXAMS[0].accessCode);
+    showToast('โหลดชุดข้อสอบเริ่มต้น (3 วิชา) เรียบร้อยแล้ว ✓', 'success');
+  };
+
+  const handleExportExamsJson = () => {
+    try {
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exams, null, 2));
+      const downloadAnchor = document.createElement('a');
+      downloadAnchor.setAttribute("href", dataStr);
+      downloadAnchor.setAttribute("download", `krusos_exams_backup_${new Date().toISOString().slice(0,10)}.json`);
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+      showToast('ส่งออกไฟล์สำรองข้อสอบ (.json) สำเร็จแล้ว สามารถนำไปเปิดในเครื่องอื่นได้ทันที', 'success');
+    } catch (e) {
+      showToast('เกิดข้อผิดพลาดในการส่งออกไฟล์สำรอง', 'error');
+    }
+  };
+
+  const handleImportExamsJson = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const parsed = JSON.parse(event.target?.result as string);
+        if (Array.isArray(parsed)) {
+          setExams(parsed);
+          saveExamsToStorage(parsed);
+          if (parsed.length > 0) {
+            setSelectedQuestionExamCode(parsed[0].accessCode);
+            setSelectedScoreExamCode(parsed[0].accessCode);
+          }
+          showToast(`นำเข้าชุดข้อสอบสำเร็จ ${parsed.length} ชุดเรียบร้อยแล้ว!`, 'success');
+        } else {
+          showToast('รูปแบบไฟล์ไม่ถูกต้อง ต้องเป็นไฟล์ .json ที่มีรายการข้อสอบ', 'error');
+        }
+      } catch (err) {
+        showToast('เกิดข้อผิดพลาดในการอ่านไฟล์ JSON กรุณาตรวจสอบไฟล์', 'error');
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  };
+
   const handleAddQuestion = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newQuestion.promptText.trim()) {
@@ -1460,126 +1509,189 @@ export default function AdminDashboardPage() {
         {/* =================================================================== */}
         {activeTab === 'exams' && (
           <div className="space-y-4">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <h2 className="text-lg font-bold text-white">ชุดข้อสอบทั้งหมดในระบบ</h2>
                 <p className="text-xs text-slate-400">คัดลอกลิงก์ส่งให้นักเรียน เปิด-ปิดรับคำตอบ หรือฉาย QR Code</p>
               </div>
-              <button
-                onClick={() => setShowCreateModal(true)}
-                className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl transition shadow-lg flex items-center gap-1.5"
-              >
-                + สร้างชุดข้อสอบใหม่
-              </button>
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleRestoreDefaultExams}
+                  className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-slate-700 hover:border-emerald-500/50 text-xs font-bold rounded-xl transition flex items-center gap-1.5 active:scale-95 shadow-sm"
+                  title="คืนค่าชุดข้อสอบเริ่มต้น 3 วิชา (ส21101, ส21102, ต้านทุจริต)"
+                >
+                  <span>🔄</span>
+                  <span className="hidden sm:inline">โหลดชุดเริ่มต้น</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleExportExamsJson}
+                  className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-cyan-400 border border-slate-700 hover:border-cyan-500/50 text-xs font-bold rounded-xl transition flex items-center gap-1.5 active:scale-95 shadow-sm"
+                  title="ดาวน์โหลดไฟล์สำรองข้อสอบทั้งหมด (.json) เพื่อเก็บไว้หรือนำไปเปิดในเครื่อง/เบราว์เซอร์อื่น"
+                >
+                  <span>💾</span>
+                  <span className="hidden sm:inline">สำรอง JSON</span>
+                </button>
+                <label
+                  className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 hover:border-amber-500/50 text-xs font-bold rounded-xl transition flex items-center gap-1.5 active:scale-95 shadow-sm cursor-pointer"
+                  title="นำเข้าไฟล์สำรองข้อสอบ (.json) ที่เคยดาวน์โหลดไว้"
+                >
+                  <span>📥</span>
+                  <span className="hidden sm:inline">นำเข้า JSON</span>
+                  <input
+                    type="file"
+                    accept=".json"
+                    className="hidden"
+                    onChange={handleImportExamsJson}
+                  />
+                </label>
+                <button
+                  onClick={() => setShowCreateModal(true)}
+                  className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl transition shadow-lg flex items-center gap-1.5 active:scale-95"
+                >
+                  <span>+</span> สร้างชุดข้อสอบใหม่
+                </button>
+              </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {exams.map((exam) => (
-                <div
-                  key={exam.id}
-                  className="bg-slate-900 border border-slate-800 p-5 rounded-2xl shadow-xl flex flex-col justify-between space-y-4"
-                >
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="px-2.5 py-0.5 rounded-md bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-mono text-xs font-bold flex items-center gap-1">
-                        <span>{exam.emoji || '📝'}</span> {exam.accessCode}
-                      </span>
-                      
-                      {/* สวิตช์ เปิด/ปิดรับคำตอบ */}
-                      <button
-                        onClick={() => handleToggleExamOpen(exam.accessCode)}
-                        className={`text-[10px] px-2.5 py-1 rounded-full font-bold transition flex items-center gap-1 border ${
-                          exam.isOpen !== false
-                            ? 'bg-emerald-950/80 text-emerald-300 border-emerald-600 hover:bg-emerald-900'
-                            : 'bg-red-950/80 text-red-300 border-red-600 hover:bg-red-900'
-                        }`}
-                        title="คลิกเพื่อสลับสถานะเปิดหรือปิดรับคำตอบ"
-                      >
-                        <span>{exam.isOpen !== false ? '🟢 เปิดรับคำตอบ' : '🔴 ปิดรับคำตอบ'}</span>
-                        <span className="text-[9px] underline">(คลิกเปลี่ยน)</span>
-                      </button>
+            {exams.length === 0 ? (
+              <div className="text-center py-16 bg-slate-900/60 border border-slate-800 rounded-3xl p-8 space-y-4 max-w-xl mx-auto my-6">
+                <div className="w-16 h-16 rounded-3xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-3xl flex items-center justify-center mx-auto shadow-inner">
+                  📝
+                </div>
+                <div className="space-y-1">
+                  <h3 className="text-base font-bold text-white">ยังไม่มีชุดข้อสอบในระบบ</h3>
+                  <p className="text-xs text-slate-400 leading-relaxed">
+                    คุณครูสามารถกดสร้างชุดข้อสอบใหม่ หรือคลิกปุ่มด้านล่างเพื่อโหลดชุดข้อสอบตัวอย่าง 3 วิชาเริ่มต้นได้ทันทีครับ
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={handleRestoreDefaultExams}
+                    className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl shadow-lg transition flex items-center gap-1.5 active:scale-95"
+                  >
+                    <span>🔄</span> คืนค่าชุดข้อสอบเริ่มต้น (3 วิชา)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowCreateModal(true)}
+                    className="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-bold rounded-xl transition flex items-center gap-1.5 active:scale-95 shadow-sm"
+                  >
+                    <span>+</span> สร้างชุดข้อสอบใหม่
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {exams.map((exam) => (
+                  <div
+                    key={exam.id}
+                    className="bg-slate-900 border border-slate-800 p-5 rounded-2xl shadow-xl flex flex-col justify-between space-y-4"
+                  >
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="px-2.5 py-0.5 rounded-md bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-mono text-xs font-bold flex items-center gap-1">
+                          <span>{exam.emoji || '📝'}</span> {exam.accessCode}
+                        </span>
+                        
+                        {/* สวิตช์ เปิด/ปิดรับคำตอบ */}
+                        <button
+                          onClick={() => handleToggleExamOpen(exam.accessCode)}
+                          className={`text-[10px] px-2.5 py-1 rounded-full font-bold transition flex items-center gap-1 border ${
+                            exam.isOpen !== false
+                              ? 'bg-emerald-950/80 text-emerald-300 border-emerald-600 hover:bg-emerald-900'
+                              : 'bg-red-950/80 text-red-300 border-red-600 hover:bg-red-900'
+                          }`}
+                          title="คลิกเพื่อสลับสถานะเปิดหรือปิดรับคำตอบ"
+                        >
+                          <span>{exam.isOpen !== false ? '🟢 เปิดรับคำตอบ' : '🔴 ปิดรับคำตอบ'}</span>
+                          <span className="text-[9px] underline">(คลิกเปลี่ยน)</span>
+                        </button>
+                      </div>
+
+                      <h3 className="font-bold text-white text-base leading-snug">{exam.title}</h3>
+                      <p className="text-xs text-slate-400">
+                        วิชา: <strong className="text-slate-200">{exam.subjectCode} {exam.subjectName}</strong>
+                      </p>
                     </div>
 
-                    <h3 className="font-bold text-white text-base leading-snug">{exam.title}</h3>
-                    <p className="text-xs text-slate-400">
-                      วิชา: <strong className="text-slate-200">{exam.subjectCode} {exam.subjectName}</strong>
-                    </p>
-                  </div>
-
-                  <div className="grid grid-cols-3 gap-2 py-3 border-y border-slate-800 text-center text-xs">
-                    <div>
-                      <span className="text-slate-500 block text-[10px]">เวลาสอบ</span>
-                      <span className="font-bold text-slate-200">{exam.durationMinutes} นาที</span>
+                    <div className="grid grid-cols-3 gap-2 py-3 border-y border-slate-800 text-center text-xs">
+                      <div>
+                        <span className="text-slate-500 block text-[10px]">เวลาสอบ</span>
+                        <span className="font-bold text-slate-200">{exam.durationMinutes} นาที</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-500 block text-[10px]">ข้อสอบ</span>
+                        <span className="font-bold text-emerald-400">{(exam.questions || []).length} ข้อ</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-500 block text-[10px]">สลับข้อ/ชอยส์</span>
+                        <span className="font-bold text-blue-400">อัตโนมัติ 🔀</span>
+                      </div>
                     </div>
-                    <div>
-                      <span className="text-slate-500 block text-[10px]">ข้อสอบ</span>
-                      <span className="font-bold text-emerald-400">{exam.questions.length} ข้อ</span>
-                    </div>
-                    <div>
-                      <span className="text-slate-500 block text-[10px]">สลับข้อ/ชอยส์</span>
-                      <span className="font-bold text-blue-400">อัตโนมัติ 🔀</span>
-                    </div>
-                  </div>
 
-                  <div className="flex flex-col gap-2 pt-1">
-                    <button
-                      onClick={() => {
-                        setSelectedQuestionExamCode(exam.accessCode);
-                        setActiveTab('questions');
-                      }}
-                      className="w-full py-2 bg-blue-600/90 hover:bg-blue-600 text-white text-xs font-bold rounded-xl transition flex items-center justify-center gap-1.5 shadow"
-                    >
-                      <span>✏️</span> จัดการ / เพิ่มข้อสอบ ({exam.questions.length} ข้อ)
-                    </button>
-
-                    <div className="flex flex-wrap items-center gap-2">
+                    <div className="flex flex-col gap-2 pt-1">
                       <button
                         onClick={() => {
-                          const url = typeof window !== 'undefined'
-                            ? `${window.location.origin}/gateway/${exam.accessCode}`
-                            : `https://krusos-exam.vercel.app/gateway/${exam.accessCode}`;
-                          navigator.clipboard.writeText(url);
-                          showToast(`คัดลอกลิงก์ข้อสอบวิชา ${exam.subjectName} (${exam.accessCode}) เรียบร้อยแล้ว`, 'success');
+                          setSelectedQuestionExamCode(exam.accessCode);
+                          setActiveTab('questions');
                         }}
-                        className="flex-1 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl transition flex items-center justify-center gap-1 shadow-md"
+                        className="w-full py-2 bg-blue-600/90 hover:bg-blue-600 text-white text-xs font-bold rounded-xl transition flex items-center justify-center gap-1.5 shadow"
                       >
-                        📋 คัดลอกลิงก์
+                        <span>✏️</span> จัดการ / เพิ่มข้อสอบ ({(exam.questions || []).length} ข้อ)
                       </button>
-                      <button
-                        onClick={() => openQrModal(exam.accessCode)}
-                        className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-xs font-bold rounded-xl transition text-slate-200 flex items-center justify-center gap-1 border border-slate-700"
-                      >
-                        📱 QR
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => openEditExamModal(exam)}
-                        className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-amber-300 hover:text-amber-200 text-xs font-bold rounded-xl transition flex items-center justify-center gap-1 border border-slate-700 hover:border-amber-500/50 shadow-sm"
-                        title="แก้ไขข้อมูลชุดข้อสอบนี้ (ชื่อวิชา, เวลาสอบ, สลับข้อ, Anti-cheat)"
-                      >
-                        <span>✏️</span> แก้ไขชุด
-                      </button>
-                      <Link
-                        href={`/gateway/${exam.accessCode}`}
-                        target="_blank"
-                        className="px-3 py-2 bg-slate-800/90 hover:bg-slate-700 text-slate-300 hover:text-emerald-400 text-xs font-bold rounded-xl transition flex items-center justify-center gap-1.5 border border-slate-700 hover:border-emerald-500/50 shadow-sm"
-                        title="เปิดดูหน้าห้องสอบจริงในมุมมองของนักเรียน"
-                      >
-                        <span>👁️</span>
-                        <span>ดูมุมมองนักเรียน</span>
-                      </Link>
-                      <button
-                        onClick={() => handleDeleteExam(exam.accessCode, exam.title)}
-                        className="px-2.5 py-2 bg-red-950/40 hover:bg-red-900/80 border border-red-900/60 text-red-300 text-xs font-bold rounded-xl transition"
-                        title="ลบชุดข้อสอบนี้"
-                      >
-                        🗑️
-                      </button>
+
+                      <div className="flex flex-wrap items-center gap-2">
+                        <button
+                          onClick={() => {
+                            const url = typeof window !== 'undefined'
+                              ? `${window.location.origin}/gateway/${exam.accessCode}`
+                              : `https://krusos-exam.vercel.app/gateway/${exam.accessCode}`;
+                            navigator.clipboard.writeText(url);
+                            showToast(`คัดลอกลิงก์ข้อสอบวิชา ${exam.subjectName} (${exam.accessCode}) เรียบร้อยแล้ว`, 'success');
+                          }}
+                          className="flex-1 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl transition flex items-center justify-center gap-1 shadow-md"
+                        >
+                          📋 คัดลอกลิงก์
+                        </button>
+                        <button
+                          onClick={() => openQrModal(exam.accessCode)}
+                          className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-xs font-bold rounded-xl transition text-slate-200 flex items-center justify-center gap-1 border border-slate-700"
+                        >
+                          📱 QR
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => openEditExamModal(exam)}
+                          className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-amber-300 hover:text-amber-200 text-xs font-bold rounded-xl transition flex items-center justify-center gap-1 border border-slate-700 hover:border-amber-500/50 shadow-sm"
+                          title="แก้ไขข้อมูลชุดข้อสอบนี้ (ชื่อวิชา, เวลาสอบ, สลับข้อ, Anti-cheat)"
+                        >
+                          <span>✏️</span> แก้ไขชุด
+                        </button>
+                        <Link
+                          href={`/gateway/${exam.accessCode}`}
+                          target="_blank"
+                          className="px-3 py-2 bg-slate-800/90 hover:bg-slate-700 text-slate-300 hover:text-emerald-400 text-xs font-bold rounded-xl transition flex items-center justify-center gap-1.5 border border-slate-700 hover:border-emerald-500/50 shadow-sm"
+                          title="เปิดดูหน้าห้องสอบจริงในมุมมองของนักเรียน"
+                        >
+                          <span>👁️</span>
+                          <span>ดูมุมมองนักเรียน</span>
+                        </Link>
+                        <button
+                          onClick={() => handleDeleteExam(exam.accessCode, exam.title)}
+                          className="px-2.5 py-2 bg-red-950/40 hover:bg-red-900/80 border border-red-900/60 text-red-300 text-xs font-bold rounded-xl transition"
+                          title="ลบชุดข้อสอบนี้"
+                        >
+                          🗑️
+                        </button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
